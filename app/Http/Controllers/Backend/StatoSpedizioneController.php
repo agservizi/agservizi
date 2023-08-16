@@ -28,7 +28,7 @@ class StatoSpedizioneController extends Controller
 
         $ordinamenti = [
             'recente' => ['testo' => 'Più recente', 'filtro' => function ($q) {
-                return $q->orderBy('id', 'desc');
+                return $q->orderBy('id');
             }],
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
@@ -71,7 +71,7 @@ class StatoSpedizioneController extends Controller
             'controller' => $nomeClasse,
             'titoloPagina' => 'Elenco ' . \App\Models\StatoSpedizione::NOME_PLURALE,
             'orderBy' => $orderBy,
-            'ordinamenti' => $ordinamenti,
+            'ordinamenti' => null,// $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
             'testoNuovo' => 'Nuovo ' . \App\Models\StatoSpedizione::NOME_SINGOLARE,

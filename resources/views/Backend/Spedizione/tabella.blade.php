@@ -8,7 +8,6 @@
             <th class="">Data spedizione</th>
             <th class="">Stato spedizione</th>
             <th class="">Denominazione destinatario</th>
-
             <th class="">Codice tracking</th>
             <th></th>
         </tr>
