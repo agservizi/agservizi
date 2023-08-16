@@ -26,7 +26,7 @@
                 <td class="">{{$record->data_spedizione?->format("d/m/Y")}}</td>
                 <td class="">{{$record->stato_spedizione}}</td>
                 <td class="">{{$record->denominazione_destinatario}}</td>
-                <td class="">{{$record->codice_tracking}}</td>
+                <td class="">{{$record->tracking($record->corriere->url_tracking)}}</td>
                 <td class="text-end text-nowrap">
                     <a data-targetZ="kt_modal" data-toggleZ="modal-ajax"
                        class="btn btn-sm btn-light btn-active-light-primary"

@@ -55,7 +55,15 @@ class Spedizione extends Model
     | PER BLADE
     |--------------------------------------------------------------------------
     */
-
+    public function tracking($link)
+    {
+        if ($link) {
+            $link .= $this->codice_tracking;
+            return "<a href='{$link}' target='_blank'>{$this->codice_tracking}</a>";
+        } else {
+            return $this->codice_tracking;
+        }
+    }
     /*
     |--------------------------------------------------------------------------
     | ALTRO

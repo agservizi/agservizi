@@ -58,9 +58,7 @@
             "@php artisan key:generate --ansi"
         ],
         "post-install-cmd": [
-            "php artisan migrate:fresh --no-interaction --force",
-            "php artisan db:seed --no-interaction --force",
-            "php artisan storage:link --no-interaction --force",
+            "php artisan migrate --no-interaction --force",
             "php artisan route:cache",
             "php artisan config:clear"
         ]

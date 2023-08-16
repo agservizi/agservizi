@@ -12,7 +12,7 @@
                 @if(!$vecchio)
                     <div class="row">
                         <div class="col-md-12">
-                            @include('Backend._inputs.inputSelect2',['campo'=>'cliente_id','required'=>false,'label'=>'Cliente','selected'=>'','col' => 2])
+                            @include('Backend._inputs.inputSelect2',['campo'=>'cliente_id','required'=>false,'label'=>'Cliente esistente','selected'=>'','col' => 2])
                         </div>
                     </div>
                     <div id="dati-nuovo">
@@ -99,12 +99,12 @@
         $(function () {
             eliminaHandler('Questa Spedizione verrà eliminata definitivamente');
 
-            select2Universale('corriere_id', 'un corriere', 1);
+            select2Universale('corriere_id', 'un corriere', 0);
 
             select2Universale('nazione_destinatario', 'una nazione', 1, 'nazione');
             $('#servizio_id').select2({
                 placeholder: 'Seleziona servizio',
-                minimumInputLength: 1,
+                minimumInputLength: 0,
                 allowClear: true,
                 width: '100%',
                 // dropdownParent: $('#modalPosizione'),

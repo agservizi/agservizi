@@ -92,7 +92,7 @@ class SpedizioneController extends Controller
     {
 
         $queryBuilder = \App\Models\Spedizione::query()
-            ->with('corriere:id,denominazione')
+            ->with('corriere:id,denominazione,url_tracking')
             ->with('servizio:id,descrizione')
             ->with('statoSpedizione:id,nome')
             ->with('cliente:id,cognome,nome');
