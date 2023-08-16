@@ -80,7 +80,7 @@ class SpedizioneController extends Controller
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
             'testoNuovo' => 'Nuova ' . \App\Models\Spedizione::NOME_SINGOLARE,
-            'testoCerca' => null,
+            'testoCerca' => 'Cerca in cliente',
         ]);
     }
 
@@ -98,10 +98,12 @@ class SpedizioneController extends Controller
             ->with('cliente:id,cognome,nome');
         $term = $request->input('cerca');
         if ($term) {
-            $arrTerm = explode(' ', $term);
-            foreach ($arrTerm as $t) {
-                $queryBuilder->where(DB::raw('concat_ws(\' \',nome)'), 'like', "%$t%");
-            }
+            $queryBuilder->whereHas('cliente', function ($q) use ($term) {
+                $arrTerm = explode(' ', $term);
+                foreach ($arrTerm as $t) {
+                    $q->where(DB::raw('concat_ws(\' \',cognome,nome)'), 'like', "%$t%");
+                }
+            });
         }
 
         //$this->conFiltro = true;
@@ -134,13 +136,13 @@ class SpedizioneController extends Controller
         $record = new Spedizione();
         if (!$request->input('cliente_id')) {
             $password = \Str::random(8);
-            $user = $this->creaCliente(new Cliente(), $request,$password);
+            $user = $this->creaCliente(new Cliente(), $request, $password);
             $record->cliente_id = $user->id;
         }
         $record->stato_spedizione = StatoSpedizione::where('primo_stato', 1)->first()->id;
         $this->salvaDati($record, $request);
         DB::commit();
-        dispatch(function () use ($user,$password) {
+        dispatch(function () use ($user, $password) {
             $user->notify(new NotificaAlNuovoCliente($password));
 
         })->afterResponse();
@@ -280,7 +282,7 @@ class SpedizioneController extends Controller
      * @param Request $request
      * @return mixed
      */
-    protected function creaCliente($record, $request,$password)
+    protected function creaCliente($record, $request, $password)
     {
 
         $nuovo = !$record->id;
