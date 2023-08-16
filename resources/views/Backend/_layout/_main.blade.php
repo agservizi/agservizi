@@ -67,9 +67,9 @@
                 <!--begin::Logo-->
                 <div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0 me-lg-5">
                     <a href="/">
-                        <img alt="Logo" src="/loghi/logo-placeholder.png"
+                        <img alt="Logo" src="/loghi/logo-piccolo.png"
                              class="h-20px h-lg-30px app-sidebar-logo-default theme-light-show"/>
-                        <img alt="Logo" src="/loghi/logo-placeholder.png"
+                        <img alt="Logo" src="/loghi/logo-piccolo.png"
                              class="h-20px h-lg-30px app-sidebar-logo-default theme-dark-show"/>
                     </a>
                 </div>

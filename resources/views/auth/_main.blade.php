@@ -30,12 +30,11 @@
                 @if(false)
                     <h1 class="mb-12">{{config('configurazione.tag_title')}}</h1>
                 @else
-                    <img alt="Logo" src="/loghi/logo-placeholder.png" class="h-100px mb-12">
+                    <img alt="Logo" src="/loghi/logo-grande.png" class="h-100px mb-12">
                 @endif
             </a>
             @yield('content')
         </div>
-
         <div class="d-flex flex-center flex-column-auto p-10">
             <div class="d-flex align-items-center fw-bold fs-6">
                 <a href="mailto:" class="text-muted text-hover-primary px-2">Contattaci</a>

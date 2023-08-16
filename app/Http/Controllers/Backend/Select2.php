@@ -33,7 +33,7 @@ class Select2 extends Controller
         switch ($key) {
 
 
-            case 'cliente':
+            case 'cliente_id':
                 $queryBuilder = Cliente::orderBy('cognome')
                     ->orderBy('nome')
                     ->select(['id', DB::raw('concat_ws(" ",cognome,nome) as text')]);
@@ -41,7 +41,7 @@ class Select2 extends Controller
                 if ($term) {
                     $arrTerm = explode(' ', $term);
                     foreach ($arrTerm as $t) {
-                        $queryBuilder->whereRaw(DB::raw('concat_ws(\' \',cognome,nome,email,telefono) like ?'), "%$t%");
+                        $queryBuilder->whereRaw('concat_ws(\' \',cognome,nome,email,telefono) like ?', "%$t%");
                     }
                 }
                 return $queryBuilder->get();

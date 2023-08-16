@@ -134,18 +134,25 @@ class SpedizioneController extends Controller
         $request->validate($this->rules(null));
         DB::beginTransaction();
         $record = new Spedizione();
+        $inviaMail = false;
         if (!$request->input('cliente_id')) {
+            $inviaMail = true;
             $password = \Str::random(8);
             $user = $this->creaCliente(new Cliente(), $request, $password);
             $record->cliente_id = $user->id;
+        } else {
+            $record->cliente_id = $request->input('cliente_id');
         }
         $record->stato_spedizione = StatoSpedizione::where('primo_stato', 1)->first()->id;
         $this->salvaDati($record, $request);
         DB::commit();
-        dispatch(function () use ($user, $password) {
-            $user->notify(new NotificaAlNuovoCliente($password));
+        if ($inviaMail) {
+            dispatch(function () use ($user, $password) {
+                $user->notify(new NotificaAlNuovoCliente($password));
 
-        })->afterResponse();
+            })->afterResponse();
+        }
+
         return $this->backToIndex();
     }
 

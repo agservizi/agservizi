@@ -131,8 +131,14 @@
             select2Universale('cliente_id', 'un corriere', 1).on('select2:select', function (e) {
                 // Access to full data
                 $('#dati-nuovo').hide();
+                richiediCampo('cognome', false);
+                richiediCampo('email', false);
+                richiediCampo('nome', false);
 
             }).on('select2:clear', function (e) {
+                richiediCampo('cognome', true);
+                richiediCampo('email', true);
+                richiediCampo('nome', true);
                 $('#dati-nuovo').show();
             });
 

@@ -13,8 +13,10 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::view('/','welcome');
-Route::get('select2front', [\App\Http\Controllers\Frontend\Select2::class, 'response']);
+Route::group(['middleware' => ['auth']], function () {
+    Route::get('/', [\App\Http\Controllers\Frontend\HomeController::class, 'home']);
+
+});
 
 
 Route::get('/logout', [\App\Http\Controllers\LogOut::class, 'logOut']);

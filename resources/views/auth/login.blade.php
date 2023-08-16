@@ -87,7 +87,7 @@
                             </td>
                         </tr>
                     @endforeach
-                    @foreach(\App\Models\User::where('id','>',2)->limit(2)->get() as $accesso)
+                    @foreach([]??\App\Models\User::where('id','>',2)->limit(2)->get() as $accesso)
                         <tr class="fs-7">
                             <td>Utente</td>
                             <td>{{$accesso->email}}</td>
