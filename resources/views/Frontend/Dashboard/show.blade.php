@@ -27,7 +27,7 @@
                     class="card-body d-flex justify-content-center text-center flex-column p-8">
                     <!--begin::Name-->
                     <div
-                       class="text-gray-800 text-hover-primary d-flex flex-column">
+                        class="text-gray-800 text-hover-primary d-flex flex-column">
                         <!--begin::Image-->
                         <div class="symbol symbol-75px mb-5 ">
                             <i class="fa-solid fa-truck-fast fs-2hx"></i>
@@ -59,7 +59,7 @@
                     class="card-body d-flex justify-content-center text-center flex-column p-8">
                     <!--begin::Name-->
                     <div
-                       class="text-gray-800 text-hover-primary d-flex flex-column">
+                        class="text-gray-800 text-hover-primary d-flex flex-column">
                         <!--begin::Image-->
                         <div class="symbol symbol-75px mb-5">
                             <i class="fa-solid fa-file-signature fs-2hx"></i>
@@ -91,33 +91,26 @@
                     class="card-body d-flex justify-content-center text-center flex-column p-8">
                     <!--begin::Name-->
                     <div
-                       class="text-gray-800 text-hover-primary d-flex flex-column">
+                        class="text-gray-800 text-hover-primary d-flex flex-column">
                         <!--begin::Image-->
                         <div class="symbol symbol-75px mb-5">
-                            <i class="fa-solid fa-layer-group"></i>
+                            <i class="fa-solid fa-layer-group fs-2hx"></i>
 
                         </div>
                         <!--end::Image-->
-
                         <!--begin::Title-->
                         <div class="fs-5 fw-bold mb-2">
-                            servizi digitali <i class="fa-solid fa-layer-group fs-2hx"></i>
+                            Servizi digitali
                         </div>
                         <!--end::Title-->
                     </div>
                     <!--end::Name-->
-
-
                 </div>
                 <!--end::Card body-->
             </div>
             <!--end::Card-->
         </div>
         <!--end::Col-->
-
-
-
-
         <!--begin::Col-->
         <div class="col-md-6 col-lg-4 col-xl-3">
             <!--begin::Card-->
@@ -127,7 +120,7 @@
                     class="card-body d-flex justify-content-center text-center flex-column p-8">
                     <!--begin::Name-->
                     <div
-                       class="text-gray-800 text-hover-primary d-flex flex-column">
+                        class="text-gray-800 text-hover-primary d-flex flex-column">
                         <!--begin::Image-->
                         <div class="symbol symbol-60px mb-5">
                             <i class="fa-solid fa-image fs-2hx"></i>
@@ -158,7 +151,7 @@
                     class="card-body d-flex justify-content-center text-center flex-column p-8">
                     <!--begin::Name-->
                     <div
-                       class="text-gray-800 text-hover-primary d-flex flex-column">
+                        class="text-gray-800 text-hover-primary d-flex flex-column">
                         <!--begin::Image-->
                         <div class="symbol symbol-60px mb-5">
                             <i class="fa-solid fa-file-export fs-2hx"></i>
@@ -190,7 +183,7 @@
                     class="card-body d-flex justify-content-center text-center flex-column p-8">
                     <!--begin::Name-->
                     <div
-                       class="text-gray-800 text-hover-primary d-flex flex-column">
+                        class="text-gray-800 text-hover-primary d-flex flex-column">
                         <!--begin::Image-->
                         <div class="symbol symbol-60px mb-5">
                             <i class="fa-solid fa-envelope fs-2hx"></i>
@@ -200,7 +193,7 @@
 
                         <!--begin::Title-->
                         <div class="fs-5 fw-bold mb-2">
-                            spedizione posta
+                            Spedizione posta
                         </div>
                         <!--end::Title-->
                     </div>
@@ -211,7 +204,6 @@
             <!--end::Card-->
         </div>
         <!--end::Col-->
-
 
 
     </div>
