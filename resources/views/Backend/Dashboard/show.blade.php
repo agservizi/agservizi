@@ -60,6 +60,8 @@
 @push('customScript')
     <script>
         $(function () {
+
+
             var KTChartsWidget1 = function () {
                 var e = {self: null, rendered: !1}, t = function () {
                     var t = document.getElementById("kt_charts_widget_1");
@@ -112,7 +114,7 @@
                                         }
                                     }
                                 },
-                                colors: [KTUtil.getCssVariableValue("--kt-success"), a],
+                                colors: ['#50cd89', a],
                                 grid: {borderColor: o, strokeDashArray: 4, yaxis: {lines: {show: !0}}}
                             };
                         e.self = new ApexCharts(t, i), setTimeout((function () {
