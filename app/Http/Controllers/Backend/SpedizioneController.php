@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Http\MieClassi\DatiRitorno;
 use App\Models\Cliente;
 use App\Models\StatoSpedizione;
 use App\Models\User;
@@ -219,6 +220,34 @@ class SpedizioneController extends Controller
             'success' => true,
             'redirect' => action([SpedizioneController::class, 'index']),
         ];
+    }
+
+
+    public function modalCambiaStato($spedizioneId)
+    {
+
+        $record = Spedizione::find($spedizioneId);
+        abort_if(!$record, 404, 'Questa spedizione non esiste');
+
+        return view('Backend.Spedizione.modalCambiaStato', [
+            'titoloPagina' => 'Cambia stato ',
+            'record' => $record,
+        ]);
+    }
+
+    public function updateStato(Request $request, $id)
+    {
+        $record = Spedizione::with('statoSpedizione')->find($id);
+        abort_if(!$record, 404);
+        $stato = StatoSpedizione::find($request->input('stato_spedizione'));
+        $record->stato_spedizione = $stato->id;
+        $record->save();
+
+
+        $datiRitorno = new DatiRitorno();
+        $datiRitorno->chiudiDialog(true);
+        $datiRitorno->oggettoReload('stato_' . $id, $stato->badgeStato());
+        return $datiRitorno->toArray();
     }
 
     /**

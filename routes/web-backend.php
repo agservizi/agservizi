@@ -12,19 +12,13 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
 
     Route::get('/', [\App\Http\Controllers\Backend\DashboardController::class, 'show']);
 
+    //Spedizioni
     Route::resource('spedizione', \App\Http\Controllers\Backend\SpedizioneController::class);
+    Route::get('spedizione-cambia-stato/{id}',[\App\Http\Controllers\Backend\SpedizioneController::class,'modalCambiaStato']);
+    Route::patch('spedizione-cambia-stato/{id}',[\App\Http\Controllers\Backend\SpedizioneController::class,'updateStato']);
 
     //select2
     Route::get('select2', [\App\Http\Controllers\Backend\Select2::class, 'response']);
-
-    //Modal
-    Route::get('modal/{cosa}', [\App\Http\Controllers\Backend\ModalController::class, 'show']);
-
-    //Impostazioni
-    Route::get('/settings/{sezione}', [\App\Http\Controllers\Backend\SettingController::class, 'edit']);
-    Route::get('/settings', [\App\Http\Controllers\Backend\SettingController::class, 'index'])->name('settings');
-    Route::post('/settings/{sezione}', [\App\Http\Controllers\Backend\SettingController::class, 'store'])->name('settings.store');
-
 
     //Corrieri
     Route::resource('corriere', \App\Http\Controllers\Backend\CorriereController::class);
@@ -38,6 +32,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
 
     //Stato spedizione
     Route::resource('stato-spedizione', \App\Http\Controllers\Backend\StatoSpedizioneController::class)->except(['show']);
+
 
     //Registri
     Route::get('registro/{cosa}', [\App\Http\Controllers\Backend\RegistriController::class, 'index']);

@@ -298,7 +298,6 @@ class CorriereController extends Controller
         //Aggiusta rapporto immagine
         Log::debug("Immagine $testoLog {$img->width()}x{$img->height()}");
         if ($canvas) {
-
             if ($img->height() < $height || $img->width() < $width) {
                 \Log::debug('Aggiusto rapporto');
                 $img->resizeCanvas($width, $height, 'center', false, 'ffffff');

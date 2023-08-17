@@ -22,10 +22,10 @@ return [
     ],
 
     'loghi_corrieri' => [
-        'cartella' => '/immagini',
+        'cartella' => '/loghi_corrieri',
         'dimensioni' => [
             'width' => 540,
-            'height' => 540
+            'height' => 360
         ]
     ],
 

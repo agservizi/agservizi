@@ -14,7 +14,7 @@
         </thead>
         <tbody>
         @foreach($records as $record)
-            <tr class="">
+            <tr >
                 <td class="">
                     {{$record->corriere->denominazione}}
                 </td>
@@ -23,7 +23,9 @@
                     {{$record->cliente->nominativo()}}
                 </td>
                 <td class="">{{$record->data_spedizione?->format("d/m/Y")}}</td>
-                <td class="">{!! $record->statoSpedizione->badgeStato() !!}</td>
+                <td class="">
+                    <a href="{{action([$controller,'modalCambiaStato'],$record->id)}}" data-target="kt_modal"
+                                data-toggle="modal-ajax" id="stato_{{$record->id}}">{!! $record->statoSpedizione->badgeStato() !!}</a></td>
                 <td class="">{{$record->denominazione_destinatario}}</td>
                 <td class="">{!! $record->tracking($record->corriere->url_tracking) !!}</td>
                 <td class="text-end text-nowrap">
