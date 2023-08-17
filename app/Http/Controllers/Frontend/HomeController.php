@@ -17,8 +17,7 @@ class HomeController extends Controller
         if (Auth::user()->hasPermissionTo('admin')) {
             return redirect()->action([DashboardController::class, 'show']);
         } else {
-            abort(404);
-            return redirect()->action([HomeController::class, 'index']);
+            return view('Frontend.Dashboard.show');
         }
     }
 

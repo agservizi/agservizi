@@ -34,6 +34,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
 
     //Clienti
     Route::resource('cliente', \App\Http\Controllers\Backend\ClienteController::class)->only(['index', 'show', 'edit']);
+    Route::post('/cliente/{id}/azione/{azione}', [\App\Http\Controllers\Backend\ClienteController::class, 'azioni']);
 
     //Stato spedizione
     Route::resource('stato-spedizione', \App\Http\Controllers\Backend\StatoSpedizioneController::class)->except(['show']);

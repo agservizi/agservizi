@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Notifications\PasswordResetNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Cliente;
 use DB;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Session;
+use Spatie\Permission\Models\Permission;
 
 class ClienteController extends Controller
 {
@@ -191,6 +196,36 @@ class ClienteController extends Controller
         ];
     }
 
+
+    public function azioni($id, $azione)
+    {
+        $u = User::find($id);
+        if (!$u) {
+            return ['success' => false, 'message' => 'Questo utente non esiste'];
+        }
+        switch ($azione) {
+            case 'sospendi':
+                $p = Permission::findByName('sospeso');
+                $u->syncPermissions([$p]);
+                return ['success' => true, 'redirect' => action([OperatoreController::class, 'index'])];
+
+            case 'impersona':
+                return $this->azioneImpersona($id);
+
+            case 'invia-mail-password-reset':
+                return $this->azioneInviaMailPassowrdReset($id);
+
+            case 'resetta-password':
+                $user = User::find($id);
+                $user->password = bcrypt('123456');
+                $user->save();
+                return ['success' => true, 'title' => 'Password impostata', 'message' => 'La password è stata impostata a 123456'];
+
+
+        }
+
+    }
+
     /**
      * @param Cliente $record
      * @param Request $request
@@ -258,6 +293,34 @@ class ClienteController extends Controller
         ];
 
         return $rules;
+    }
+
+    protected function azioneImpersona($id)
+    {
+
+        $user = User::find($id);
+        if ($user->hasPermissionTo('admin') && Auth::id() != 1) {
+            return ['success' => false, 'message' => 'Non puoi impersonare questo utente'];
+        }
+
+        Session::flash('impersona', Auth::id());
+        Auth::loginUsingId($id, false);
+        return ['success' => true, 'redirect' => '/'];
+    }
+
+    protected function azioneInviaMailPassowrdReset($id)
+    {
+
+        $user = User::find($id);
+
+        dispatch(function () use ($user) {
+            $token = Password::broker('new_users')->createToken($user);
+            $user->notify(new PasswordResetNotification($token));
+
+        })->afterResponse();
+        return ['success' => true, 'title' => 'Email inviata', 'message' => 'La mail con il link per impostare la password è stata inviata all\'indirizzo ' . $user->email];
+
+
     }
 
 }

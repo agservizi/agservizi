@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\Route;
 Route::group(['middleware' => ['auth']], function () {
     Route::get('/', [\App\Http\Controllers\Frontend\HomeController::class, 'home']);
 
+    //Spedizioni
+    Route::get('spedizione', [\App\Http\Controllers\Frontend\SpedizioneController::class, 'index']);
+
 });
 
 

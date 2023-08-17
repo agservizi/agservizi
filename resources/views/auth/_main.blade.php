@@ -24,14 +24,12 @@
 <body id="kt_body" class="bg-body">
 <div class="d-flex flex-column flex-root">
     <div class="d-flex flex-column flex-column-fluid bgi-position-y-bottom position-x-center bgi-no-repeat bgi-size-contain bgi-attachment-fixed "
-         style="background-image: url(/loghi/sfondo-login.png)">
+         style="">
         <div class="d-flex flex-center flex-column flex-column-fluid p-10 pb-lg-20 ">
             <a href="/">
-                @if(false)
-                    <h1 class="mb-12">{{config('configurazione.tag_title')}}</h1>
-                @else
-                    <img alt="Logo" src="/loghi/logo-grande.png" class="h-100px mb-12">
-                @endif
+
+                    <img alt="Logo" src="/loghi/logo-ag-grande.png" class="h-100px mb-12">
+
             </a>
             @yield('content')
         </div>
