@@ -14,12 +14,12 @@
                id="stato_{{$record->id}}">{!! $record->statoSpedizione->badgeStato() !!}</a>
             @if($record->letteraDiVettura)
                 <a href="{{action([\App\Http\Controllers\Backend\SpedizioneController::class,'downloadAllegato'],$record->letteraDiVettura->id)}}">
-                    <i class="fa-solid fa-file" data-bs-toggle="tooltip" title="Lettera di vettura"></i>
+                    <i class="fa-solid fa-file fs-4" data-bs-toggle="tooltip" title="Lettera di vettura"></i>
                 </a>
             @endif
             @if($record->pod)
                 <a href="{{action([\App\Http\Controllers\Backend\SpedizioneController::class,'downloadAllegato'],$record->pod->id)}}">
-                    <i class="fa-solid fa-file-circle-check" data-bs-toggle="tooltip" title="Pod"></i>
+                    <i class="fa-solid fa-file-circle-check fs-4" data-bs-toggle="tooltip" title="Pod"></i>
                 </a>
             @endif
         </td>

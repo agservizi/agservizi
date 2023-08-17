@@ -18,6 +18,8 @@ Route::group(['middleware' => ['auth']], function () {
 
     //Spedizioni
     Route::get('spedizione', [\App\Http\Controllers\Frontend\SpedizioneController::class, 'index']);
+    Route::get('/spedizione-download/{id}', [\App\Http\Controllers\Frontend\SpedizioneController::class, 'downloadAllegato']);
+
 
 });
 

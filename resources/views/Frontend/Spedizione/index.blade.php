@@ -28,6 +28,7 @@
                         <th class="">Stato spedizione</th>
                         <th class="">Denominazione destinatario</th>
                         <th class="">Codice tracking</th>
+                        <th class="">Download</th>
                         <th></th>
                     </tr>
                     </thead>
@@ -43,7 +44,22 @@
                             <td class="">{!! $record->statoSpedizione->badgeStato() !!}</td>
                             <td class="">{{$record->denominazione_destinatario}}</td>
                             <td class="">{!! $record->tracking($record->corriere->url_tracking) !!}</td>
-                            <td class="text-end text-nowrap">
+                            <td class="text-nowrap">
+
+
+                                @if($record->letteraDiVettura)
+                                    <a href="{{action([\App\Http\Controllers\Frontend\SpedizioneController::class,'downloadAllegato'],$record->letteraDiVettura->id)}}"
+                                       class="btn btn-primary btn-sm">
+                                        <i class="fa-solid fa-download"></i> Lettera di vettura
+                                    </a>
+
+                                @endif
+                                @if($record->pod)
+                                    <a href="{{action([\App\Http\Controllers\Frontend\SpedizioneController::class,'downloadAllegato'],$record->pod->id)}}"
+                                       class="btn btn-primary btn-sm">
+                                        <i class="fa-solid fa-download"></i> Pod
+                                    </a>
+                                @endif
                                 @if(false)
                                     <a data-targetZ="kt_modal" data-toggleZ="modal-ajax"
                                        class="btn btn-sm btn-light btn-active-light-primary"

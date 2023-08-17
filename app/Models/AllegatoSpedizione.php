@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Http\Funzioni\FunzioniAllegato;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class AllegatoSpedizione extends Model
 {
@@ -45,6 +46,12 @@ class AllegatoSpedizione extends Model
     | RELAZIONI
     |--------------------------------------------------------------------------
     */
+
+
+    public function spedizione(): HasOne
+    {
+        return $this->hasOne(Spedizione::class,'id','spedizione_id');
+    }
 
 
     public static function perBlade($spedizioneId,$cosa)
