@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\MieClassiCache\CacheUnaVoltaAlGiorno;
+use App\Models\Spedizione;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -21,7 +22,8 @@ class DashboardController extends Controller
         })->afterResponse();
 
         $titoloPagina = 'Dashboard';
-        return view('Backend.Dashboard.show', compact( 'titoloPagina', ));
+        $grafico = $this->reportAnno($request->input('anno', now()->year));
+        return view('Backend.Dashboard.show', compact( 'titoloPagina','grafico' ));
 
 
     }
@@ -44,6 +46,37 @@ class DashboardController extends Controller
             'mainMenu' => 'dashboard',
         ]);
 
+    }
+
+    private function reportAnno($anno)
+    {
+        $perMese = Spedizione::selectRaw('MONTH(created_at) as mese,YEAR(created_at) as anno, count(*) as conteggio ')->groupByRaw('YEAR(created_at), MONTH(created_at)')
+            ->whereYear('created_at', $anno)
+            ->get();
+
+
+        $arrDati = [];
+        for ($n = 1; $n <= 12; $n++) {
+            $datiMese = $perMese->where('mese', $n)->first();
+            $arrDati['conteggio'][] = $datiMese?->conteggio ?? '';
+            $arrDati['labels'][] = mese($n);
+        }
+
+
+        return [
+            'anno' => $anno,
+            'arrDati' => $arrDati,
+            'elencoAnni' => $this->elencoAnni(),
+        ];
+    }
+
+    private function elencoAnni(): array
+    {
+        $anni = [];
+        for ($anno = config('configurazione.primoAnno'); $anno <= now()->year; $anno++) {
+            $anni[] = $anno;
+        }
+        return $anni;
     }
 
 
