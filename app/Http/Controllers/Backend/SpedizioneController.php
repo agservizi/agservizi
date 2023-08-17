@@ -95,7 +95,8 @@ class SpedizioneController extends Controller
             ->with('corriere:id,denominazione,url_tracking')
             ->with('servizio:id,descrizione')
             ->with('statoSpedizione:id,nome')
-            ->with('cliente:id,cognome,nome');
+            ->with('cliente:id,cognome,nome')
+            ->with('statoSpedizione:id,nome,colore_hex');
         $term = $request->input('cerca');
         if ($term) {
             $queryBuilder->whereHas('cliente', function ($q) use ($term) {

@@ -31,7 +31,7 @@ function getInputOra($value)
 
 function getInputUcwords($value)
 {
-    return $value? ucwords(strtolower($value), " '-"):null;
+    return $value ? ucwords(strtolower($value), " '-") : null;
 
 }
 
@@ -93,6 +93,14 @@ function getInputAggiungi39($value)
 {
     if (!Str::of($value)->startsWith('+39')) {
         $value = '+39' . $value;
+    }
+    return $value;
+}
+
+function getInputHttps($value)
+{
+    if (Str::of($value)->startsWith('www')) {
+        $value = 'https://' . $value;
     }
     return $value;
 }

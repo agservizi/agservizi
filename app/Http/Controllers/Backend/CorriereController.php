@@ -11,6 +11,7 @@ use DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
+use function App\singolareOplurale;
 
 class CorriereController extends Controller
 {
@@ -150,10 +151,13 @@ class CorriereController extends Controller
      */
     public function edit(string $id)
     {
-        $record = Corriere::find($id);
+        $record = Corriere::withCount('spedizioni')->find($id);
+
+
         abort_if(!$record, 404, 'Questo corriere non esiste');
-        if (false) {
-            $eliminabile = 'Non eliminabile perchè presente in ...';
+
+        if ($record->spedizioni_count) {
+            $eliminabile = 'Non eliminabile perchè presente in ' . singolareOplurale($record->spedizioni_count, 'spedizione', 'spedizioni');
         } else {
             $eliminabile = true;
         }
@@ -213,7 +217,7 @@ class CorriereController extends Controller
         $campi = [
             'denominazione' => 'app\getInputUcwords',
             'logo' => '',
-            'url_tracking' => '',
+            'url_tracking' => 'app\getInputHttps',
             'abilitato' => 'app\getInputCheckbox',
         ];
         foreach ($campi as $campo => $funzione) {

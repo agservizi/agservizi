@@ -49,6 +49,11 @@ class StatoSpedizione extends Model
     |--------------------------------------------------------------------------
     */
 
+    public function badgeStato()
+    {
+        return "<span class='badge' style='background-color: {$this->colore_hex}'>{$this->nome}</span>";
+    }
+
     /*
     |--------------------------------------------------------------------------
     | ALTRO

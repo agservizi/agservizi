@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Corriere extends Model
 {
     use HasFactory;
-    protected $table="corrieri";
+
+    protected $table = "corrieri";
 
     public const NOME_SINGOLARE = "corriere";
     public const NOME_PLURALE = "corrieri";
@@ -18,6 +20,16 @@ class Corriere extends Model
     | RELAZIONI
     |--------------------------------------------------------------------------
     */
+
+    public function servizi(): HasMany
+    {
+        return $this->hasMany(Servizio::class, 'corriere_id');
+    }
+
+    public function spedizioni()
+    {
+        return $this->hasManyThrough(Spedizione::class, Servizio::class, 'corriere_id', 'servizio_id', 'id', 'id');
+    }
 
     /*
     |--------------------------------------------------------------------------

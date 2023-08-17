@@ -5,11 +5,10 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Servizio;
+use App\Models\Cliente;
 use DB;
-use function App\singolareOplurale;
 
-class ServizioController extends Controller
+class ClienteController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -60,22 +59,22 @@ class ServizioController extends Controller
 
         if ($request->ajax()) {
             return [
-                'html' => base64_encode(view('Backend.Servizio.tabella', [
+                'html' => base64_encode(view('Backend.Cliente.tabella', [
                     'records' => $records,
                     'controller' => $nomeClasse,
                 ]))
             ];
         }
 
-        return view('Backend.Servizio.index', [
+        return view('Backend.Cliente.index', [
             'records' => $records,
             'controller' => $nomeClasse,
-            'titoloPagina' => 'Elenco ' . \App\Models\Servizio::NOME_PLURALE,
+            'titoloPagina' => 'Elenco ' . \App\Models\Cliente::NOME_PLURALE,
             'orderBy' => $orderBy,
             'ordinamenti' => $ordinamenti,
             'filtro' => $filtro ?? 'tutti',
             'conFiltro' => $this->conFiltro,
-            'testoNuovo' => 'Nuovo ' . \App\Models\Servizio::NOME_SINGOLARE,
+            'testoNuovo' => null,//'Nuovo '. \App\Models\Cliente::NOME_SINGOLARE,
             'testoCerca' => null,
         ]);
     }
@@ -87,7 +86,8 @@ class ServizioController extends Controller
     protected function applicaFiltri($request)
     {
 
-        $queryBuilder = \App\Models\Servizio::query();
+        $queryBuilder = \App\Models\Cliente::query()
+            ->SoloCliente();
         $term = $request->input('cerca');
         if ($term) {
             $arrTerm = explode(' ', $term);
@@ -106,14 +106,12 @@ class ServizioController extends Controller
      */
     public function create()
     {
-        $record = new Servizio();
-        $record->corriere_id = \request()->input('corriere_id');
-        $record->abilitato = 1;
-        return view('Backend.Servizio.edit', [
+        $record = new Cliente();
+        return view('Backend.Cliente.edit', [
             'record' => $record,
-            'titoloPagina' => 'Nuovo ' . Servizio::NOME_SINGOLARE,
+            'titoloPagina' => 'Nuovo ' . Cliente::NOME_SINGOLARE,
             'controller' => get_class($this),
-            'breadcrumbs' => [action([CorriereController::class, 'show'],$record->corriere_id) => 'Torna al corriere'],
+            'breadcrumbs' => [action([ClienteController::class, 'index']) => 'Torna a elenco ' . Cliente::NOME_PLURALE],
         ]);
     }
 
@@ -123,9 +121,9 @@ class ServizioController extends Controller
     public function store(Request $request)
     {
         $request->validate($this->rules(null));
-        $record = new Servizio();
+        $record = new Cliente();
         $this->salvaDati($record, $request);
-        return $this->backToIndex($record->corriere_id);
+        return $this->backToIndex();
     }
 
     /**
@@ -133,13 +131,13 @@ class ServizioController extends Controller
      */
     public function show(string $id)
     {
-        $record = Servizio::find($id);
-        abort_if(!$record, 404, 'Questo servizio non esiste');
-        return view('Backend.Servizio.show', [
+        $record = Cliente::SoloCliente()->find($id);
+        abort_if(!$record, 404, 'Questo cliente non esiste');
+        return view('Backend.Cliente.show', [
             'record' => $record,
-            'controller' => ServizioController::class,
-            'titoloPagina' => ucfirst(Servizio::NOME_SINGOLARE),
-            'breadcrumbs' => [action([ServizioController::class, 'index']) => 'Torna a elenco ' . Servizio::NOME_PLURALE],
+            'controller' => ClienteController::class,
+            'titoloPagina' => ucfirst(Cliente::NOME_SINGOLARE),
+            'breadcrumbs' => [action([ClienteController::class, 'index']) => 'Torna a elenco ' . Cliente::NOME_PLURALE],
         ]);
     }
 
@@ -148,19 +146,19 @@ class ServizioController extends Controller
      */
     public function edit(string $id)
     {
-        $record = Servizio::with('spedizioni')->find($id);
-        abort_if(!$record, 404, 'Questo servizio non esiste');
-        if ($record->spedizioni_count) {
-            $eliminabile = 'Non eliminabile perchè presente in '.singolareOplurale($record->spedizioni_count,'spedizione','spedizioni');
+        $record = Cliente::find($id);
+        abort_if(!$record, 404, 'Questo cliente non esiste');
+        if (false) {
+            $eliminabile = 'Non eliminabile perchè presente in ...';
         } else {
             $eliminabile = true;
         }
-        return view('Backend.Servizio.edit', [
+        return view('Backend.Cliente.edit', [
             'record' => $record,
-            'controller' => ServizioController::class,
-            'titoloPagina' => 'Modifica ' . Servizio::NOME_SINGOLARE,
+            'controller' => ClienteController::class,
+            'titoloPagina' => 'Modifica ' . Cliente::NOME_SINGOLARE,
             'eliminabile' => $eliminabile,
-            'breadcrumbs' => [action([CorriereController::class, 'show'],$record->corriere_id) => 'Torna al corriere'],
+            'breadcrumbs' => [action([ClienteController::class, 'index']) => 'Torna a elenco ' . Cliente::NOME_PLURALE]
 
         ]);
     }
@@ -170,12 +168,12 @@ class ServizioController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $record = Servizio::find($id);
-        abort_if(!$record, 404, 'Questo ' . Servizio::NOME_SINGOLARE . ' non esiste');
+        $record = Cliente::find($id);
+        abort_if(!$record, 404, 'Questo ' . Cliente::NOME_SINGOLARE . ' non esiste');
         $request->validate($this->rules($id));
         $this->salvaDati($record, $request);
 
-        return $this->backToIndex($record->corriere_id);
+        return $this->backToIndex();
     }
 
     /**
@@ -183,18 +181,18 @@ class ServizioController extends Controller
      */
     public function destroy(string $id)
     {
-        $record = Servizio::find($id);
-        abort_if(!$record, 404, 'Questo ' . Servizio::NOME_SINGOLARE . ' non esiste');
+        $record = Cliente::find($id);
+        abort_if(!$record, 404, 'Questo ' . Cliente::NOME_SINGOLARE . ' non esiste');
         $record->delete();
 
         return [
             'success' => true,
-            'redirect' => action([ServizioController::class, 'index']),
+            'redirect' => action([ClienteController::class, 'index']),
         ];
     }
 
     /**
-     * @param Servizio $record
+     * @param Cliente $record
      * @param Request $request
      * @return mixed
      */
@@ -209,9 +207,18 @@ class ServizioController extends Controller
 
         //Ciclo su campi
         $campi = [
-            'corriere_id' => '',
-            'descrizione' => '',
-            'abilitato' => 'app\getInputCheckbox',
+            'nome' => 'app\getInputUcwords',
+            'cognome' => 'app\getInputUcwords',
+            'email' => 'strtolower',
+            'email_verified_at' => '',
+            'password' => '',
+            'two_factor_secret' => '',
+            'two_factor_recovery_codes' => '',
+            'two_factor_confirmed_at' => '',
+            'remember_token' => '',
+            'ultimo_accesso' => '',
+            'telefono' => 'app\getInputTelefono',
+            'ruolo' => '',
         ];
         foreach ($campi as $campo => $funzione) {
             $valore = $request->$campo;
@@ -225,9 +232,9 @@ class ServizioController extends Controller
         return $record;
     }
 
-    protected function backToIndex($corriereId)
+    protected function backToIndex()
     {
-        return redirect()->action([CorriereController::class, 'show'],$corriereId);
+        return redirect()->action([get_class($this), 'index']);
     }
 
 
@@ -236,9 +243,18 @@ class ServizioController extends Controller
 
 
         $rules = [
-            'corriere_id' => ['required'],
-            'descrizione' => ['required', 'max:255'],
-            'abilitato' => ['nullable'],
+            'nome' => ['required', 'max:255'],
+            'cognome' => ['required', 'max:255'],
+            'email' => ['required', 'email'],
+            'email_verified_at' => ['nullable'],
+            'password' => ['required', 'max:255'],
+            'two_factor_secret' => ['nullable'],
+            'two_factor_recovery_codes' => ['nullable'],
+            'two_factor_confirmed_at' => ['nullable'],
+            'remember_token' => ['nullable'],
+            'ultimo_accesso' => ['nullable'],
+            'telefono' => ['nullable', new \App\Rules\TelefonoRule()],
+            'ruolo' => ['nullable', 'max:255'],
         ];
 
         return $rules;

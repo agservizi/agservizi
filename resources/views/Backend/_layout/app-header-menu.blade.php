@@ -10,6 +10,11 @@
                 class="menu-title">{{ucfirst(\App\Models\Spedizione::NOME_PLURALE)}}</span></span>
     </a>
     <!--end:Menu item-->
+    <a href="{{action([\App\Http\Controllers\Backend\ClienteController::class,'index'])}}"
+       class="menu-item me-0 me-lg-2">
+        <span class="menu-link"><span
+                class="menu-title">{{ucfirst(\App\Models\Cliente::NOME_PLURALE)}}</span></span>
+    </a>
     <!--begin:Menu item-->
     <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start"
          class="menu-item menu-lg-down-accordion menu-sub-lg-down-indention me-0 me-lg-2">
