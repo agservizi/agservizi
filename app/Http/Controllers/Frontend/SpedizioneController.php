@@ -13,7 +13,13 @@ class SpedizioneController extends Controller
     public function index()
     {
         return view('Frontend.Spedizione.index', [
-            'records' => Spedizione::where('cliente_id', \Auth::id())->orderByDesc('data_spedizione')->paginate(),
+            'records' => Spedizione::with('corriere:id,denominazione,url_tracking')
+                ->with('servizio:id,descrizione')
+                ->with('statoSpedizione:id,nome')
+                ->with('statoSpedizione:id,nome,colore_hex')
+                ->where('cliente_id', \Auth::id())
+                ->latest()
+                ->paginate(),
             'titoloPagina' => 'Spedizioni' ,
         ]);
     }

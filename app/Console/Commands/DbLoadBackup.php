@@ -29,7 +29,7 @@ class DbLoadBackup extends Command
     {
 
         //php artisan snapshot:load my-first-dump
-        $this->call('snapshot:load', ['name' => 'mysql-...']);
+        $this->call('snapshot:load', ['name' => 'mysql-area-clienti']);
 
         return 0;
     }

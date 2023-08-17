@@ -7,17 +7,12 @@
     >
         @method('PATCH')
         @csrf
-        <div class="row mb-6">
-            <!--begin::Heading-->
-            <div class="col-lg-4 col-form-label text-lg-end">
-                <label class="fw-bold fs-6  required">Stato spedizione</label>
-            </div>
-            <!--end::Heading-->
+        <div class="row pt-12">
             <!--begin::Row-->
             @php($selected=old('stato_spedizione',$record->stato_spedizione))
-            <div class="col-lg-8 fv-row fv-plugins-icon-container">
+            <div class="col-lg-12 fv-row fv-plugins-icon-container">
                 <!--begin::Radio group-->
-                <div class="btn-group" data-kt-buttons="true" data-kt-buttons-target="[data-kt-button]">
+                <div class="btn-group w-100" data-kt-buttons="true" data-kt-buttons-target="[data-kt-button]">
                     @foreach(\App\Models\StatoSpedizione::get() as $stato)
                         <label
                             class="btn btn-outline-dark  btn-active-primary {{$selected==$stato->id?'active':''}}" style="background-color: {{$stato->colore_hex}};"
