@@ -26,8 +26,9 @@ class DatabaseSeeder extends Seeder
         $this->call(PermessiSeeder::class);
         $this->call(AdminSeeder::class);
 
-        return;
+
 
         $this->call(ServiziTableSeeder::class);
+        $this->call(StatiSpedizioniTableSeeder::class);
     }
 }

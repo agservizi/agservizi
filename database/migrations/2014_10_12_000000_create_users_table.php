@@ -21,7 +21,7 @@ return new class extends Migration {
             $table->rememberToken();
             $table->timestamp('ultimo_accesso')->nullable();
             $table->string('telefono')->nullable();
-            $table->string('ruolo')->nullable();
+            $table->string('ruolo')->nullable()->index();
             $table->json('extra')->nullable();
         });
     }
