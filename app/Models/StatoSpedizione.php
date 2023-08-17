@@ -5,6 +5,7 @@ namespace App\Models;
 use Cviebrock\EloquentSluggable\Sluggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StatoSpedizione extends Model
 {
@@ -36,6 +37,11 @@ class StatoSpedizione extends Model
     | RELAZIONI
     |--------------------------------------------------------------------------
     */
+
+    public function spedizioni(): HasMany
+    {
+        return $this->hasMany(Spedizione::class,'stato_spedizione');
+    }
 
     /*
     |--------------------------------------------------------------------------
