@@ -185,8 +185,6 @@
                         <!--end::Content-->
                     </div>
                     <!--end::Content wrapper-->
-
-
                     <!--begin::Footer-->
                     <div id="kt_app_footer"
                          class="app-footer  d-flex flex-column flex-md-row align-items-center flex-center flex-md-stack ">
@@ -214,14 +212,10 @@
                     <!--end::Footer-->
                 </div>
                 <!--end:::Main-->
-
-
             </div>
             <!--end::Wrapper container-->
         </div>
         <!--end::Wrapper-->
-
-
     </div>
     <!--end::Page-->
 </div>
