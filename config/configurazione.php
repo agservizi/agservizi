@@ -3,7 +3,7 @@
 return [
 
 
-    'tag_title' => env('APP_NAME'),
+    'tag_title' => 'Area Clienti',
     'log_rocket' => '',
 
     'mostra_accessi_test'=>true,
