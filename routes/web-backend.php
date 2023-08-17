@@ -16,6 +16,9 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
     Route::resource('spedizione', \App\Http\Controllers\Backend\SpedizioneController::class);
     Route::get('spedizione-cambia-stato/{id}',[\App\Http\Controllers\Backend\SpedizioneController::class,'modalCambiaStato']);
     Route::patch('spedizione-cambia-stato/{id}',[\App\Http\Controllers\Backend\SpedizioneController::class,'updateStato']);
+    Route::post('spedizione-upload/{cosa}/{id}',[\App\Http\Controllers\Backend\SpedizioneController::class,'uploadAllegato']);
+    Route::delete('spedizione-upload/',[\App\Http\Controllers\Backend\SpedizioneController::class,'deleteAllegato']);
+    Route::get('/spedizione-download/{id}', [\App\Http\Controllers\Backend\SpedizioneController::class, 'downloadAllegato']);
 
     //select2
     Route::get('select2', [\App\Http\Controllers\Backend\Select2::class, 'response']);

@@ -9,10 +9,10 @@
                             <!--begin::Col-->
                             <div class="col">
                                 <div class="card card-dashed flex-center min-w-175px my-3 p-6" style="background-color: {{$stato->colore_hex}};">
-                                    <span class="fs-4 fw-bold  pb-1 px-2">{!! $stato->badgeStato() !!}</span>
+                                    <span class="fs-4 fw-bold  pb-1 px-2 text-gray-300">{!! $stato->nome !!}</span>
                                     <span class="fs-lg-2tx fw-bold d-flex justify-content-center">
 														<span data-kt-countup="true"
-                                                              data-kt-countup-value="{{$stato->spedizioni_count}}" class="text-active-gray-200">0</span></span>
+                                                              data-kt-countup-value="{{$stato->spedizioni_count}}" class="text-gray-300">0</span></span>
                                 </div>
                             </div>
                             <!--end::Col-->

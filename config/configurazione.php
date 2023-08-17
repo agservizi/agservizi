@@ -28,6 +28,9 @@ return [
             'height' => 360
         ]
     ],
+    'allegati_spedizioni' => [
+        'cartella' => '/allegati_spedizioni',
+    ],
 
 
 ];

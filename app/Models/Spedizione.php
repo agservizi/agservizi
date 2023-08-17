@@ -44,6 +44,15 @@ class Spedizione extends Model
         return $this->hasOne(StatoSpedizione::class, 'id', 'stato_spedizione');
     }
 
+    public function letteraDiVettura(): HasOne
+    {
+        return $this->hasOne(AllegatoSpedizione::class, 'spedizione_id')->where('cosa','ldv');
+    }
+    public function pod(): HasOne
+    {
+        return $this->hasOne(AllegatoSpedizione::class, 'spedizione_id')->where('cosa','pod');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPE

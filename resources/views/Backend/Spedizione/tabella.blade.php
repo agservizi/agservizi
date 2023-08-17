@@ -13,28 +13,7 @@
         </tr>
         </thead>
         <tbody>
-        @foreach($records as $record)
-            <tr >
-                <td class="">
-                    {{$record->corriere->denominazione}}
-                </td>
-                <td class="">{{$record->servizio->descrizione}}</td>
-                <td class="">
-                    {{$record->cliente->nominativo()}}
-                </td>
-                <td class="">{{$record->data_spedizione?->format("d/m/Y")}}</td>
-                <td class="">
-                    <a href="{{action([$controller,'modalCambiaStato'],$record->id)}}" data-target="kt_modal"
-                                data-toggle="modal-ajax" id="stato_{{$record->id}}">{!! $record->statoSpedizione->badgeStato() !!}</a></td>
-                <td class="">{{$record->denominazione_destinatario}}</td>
-                <td class="">{!! $record->tracking($record->corriere->url_tracking) !!}</td>
-                <td class="text-end text-nowrap">
-                    <a data-targetZ="kt_modal" data-toggleZ="modal-ajax"
-                       class="btn btn-sm btn-light btn-active-light-primary"
-                       href="{{action([$controller,'edit'],$record->id)}}">Modifica</a>
-                </td>
-            </tr>
-        @endforeach
+        @include('Backend.Spedizione.rigaTabella')
         </tbody>
     </table>
 </div>

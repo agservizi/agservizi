@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Http\MieClassi\DatiRitorno;
+use App\Models\AllegatoCafPatronato;
+use App\Models\AllegatoSpedizione;
 use App\Models\Cliente;
 use App\Models\StatoSpedizione;
 use App\Models\User;
@@ -12,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Spedizione;
 use DB;
+use Illuminate\Support\Str;
 use Illuminate\Testing\Fluent\Concerns\Has;
 
 class SpedizioneController extends Controller
@@ -97,7 +100,9 @@ class SpedizioneController extends Controller
             ->with('servizio:id,descrizione')
             ->with('statoSpedizione:id,nome')
             ->with('cliente:id,cognome,nome')
-            ->with('statoSpedizione:id,nome,colore_hex');
+            ->with('statoSpedizione:id,nome,colore_hex')
+            ->with('letteraDiVettura:id,spedizione_id')
+            ->with('pod:id,spedizione_id');
         $term = $request->input('cerca');
         if ($term) {
             $queryBuilder->whereHas('cliente', function ($q) use ($term) {
@@ -232,6 +237,7 @@ class SpedizioneController extends Controller
         return view('Backend.Spedizione.modalCambiaStato', [
             'titoloPagina' => 'Cambia stato ',
             'record' => $record,
+            'controller' => SpedizioneController::class,
         ]);
     }
 
@@ -243,11 +249,72 @@ class SpedizioneController extends Controller
         $record->stato_spedizione = $stato->id;
         $record->save();
 
+        $record = \App\Models\Spedizione::query()
+            ->with('corriere:id,denominazione,url_tracking')
+            ->with('servizio:id,descrizione')
+            ->with('statoSpedizione:id,nome')
+            ->with('cliente:id,cognome,nome')
+            ->with('statoSpedizione:id,nome,colore_hex')
+            ->with('letteraDiVettura:id,spedizione_id')
+            ->with('pod:id,spedizione_id')
+            ->find($id);
 
         $datiRitorno = new DatiRitorno();
         $datiRitorno->chiudiDialog(true);
-        $datiRitorno->oggettoReload('stato_' . $id, $stato->badgeStato());
+        $datiRitorno->eseguiFunzione('modalAjx');
+        $datiRitorno->oggettoReplace('tr_' . $id, view('Backend.Spedizione.rigaTabella', [
+            'records' => [$record],
+            'controller' => SpedizioneController::class
+        ]));
         return $datiRitorno->toArray();
+    }
+
+
+    public function uploadAllegato(Request $request, $cosa, $id)
+    {
+        $file = new AllegatoSpedizione();
+
+        if ($request->file('file')) {
+            $filePath = $request->file('file');
+            $estensione = $filePath->extension();
+            $fileName = Str::ulid() . '.' . $estensione;
+            $cartella = config('configurazione.allegati_spedizioni.cartella');
+            $request->file('file')->storeAs($cartella, $fileName);
+            $file->path_filename = $cartella . '/' . $fileName;
+            $file->filename_originale = $filePath->getClientOriginalName();
+            if ($request->input('uid') && $request->input('uid') !== 'undefined') {
+                $file->uid = $request->input('uid');
+            }
+            $file->dimensione_file = $filePath->getSize();
+            $file->spedizione_id = $id;
+            $file->cosa = $cosa;
+            $file->save();
+
+            return response()->json(['success' => true, 'id' => $file->id, 'filename' => $fileName, 'thumbnail' => $file->urlThumbnail()]);
+
+        }
+        abort(404, 'File non presente');
+
+    }
+
+    public function deleteAllegato(Request $request)
+    {
+        $record = AllegatoSpedizione::find($request->input('id'));
+        abort_if(!$record, 404, 'File non trovato');
+        \Log::debug(__FUNCTION__, $record->toArray());
+
+        \Log::debug('elimino allegato cliente' . $record->path_filename);
+        $record->delete();
+        return $record->path_filename;
+    }
+
+    public function downloadAllegato($id)
+    {
+        $record = AllegatoSpedizione::find($id);
+        abort_if(!$record, 404, 'Questo allegato non esiste');
+
+        return response()->download(\Storage::path($record->path_filename), $record->filename_originale);
+
     }
 
     /**

@@ -31,6 +31,17 @@ class DatiRitorno
 
 
     /**
+     * @param string $funzione
+     * @return DatiRitorno
+     */
+    public function eseguiFunzione($funzione)
+    {
+        $this->datiRitornoArray = array_merge($this->datiRitornoArray, ['eseguiFunzione' => $funzione]);
+        return $this;
+
+    }
+
+    /**
      * @param bool $bool
      * @return DatiRitorno
      */
