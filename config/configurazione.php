@@ -6,7 +6,7 @@ return [
     'tag_title' => 'Area Clienti',
     'log_rocket' => '',
 
-    'mostra_accessi_test'=>true,
+    'mostra_accessi_test'=>false,
     'accessi_test' => [
         ['descrizione' => 'Admin', 'email' => 'admin@admin.com', 'password' => 'password'],
     ],
