@@ -2,12 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::group(['middleware' => ['auth']], function () {
-    Route::get('/metronic/{cosa}', [\App\Http\Controllers\Backend\AreaPersonaleController::class, 'metronic']);
-
-});
-
-
 Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function () {
 
     Route::get('/', [\App\Http\Controllers\Backend\DashboardController::class, 'show']);

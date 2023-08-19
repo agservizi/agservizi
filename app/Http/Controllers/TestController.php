@@ -16,9 +16,6 @@ class TestController extends Controller
     public function __invoke()
     {
 
-        return view('welcome', [
-            'titoloPagina' => 'ciao'
-        ]);
-
+        abort(404);
     }
 }
