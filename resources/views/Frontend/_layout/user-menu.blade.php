@@ -32,14 +32,16 @@
         <!--begin::Menu separator-->
         <div class="separator my-2"></div>
         <!--end::Menu separator-->
-        @if(false)
             <!--begin::Menu item-->
             <div class="menu-item px-5">
-                <a href="/metronic8/demo46/../demo46/account/overview.html" class="menu-link px-5">
-                    My Profile
+                <a href="{{action([\App\Http\Controllers\Frontend\DatiUtenteController::class,'show'])}}" class="menu-link px-5">
+                    Modifica i tuoi dati
                 </a>
             </div>
             <!--end::Menu item-->
+        <div class="separator my-2"></div>
+
+    @if(false)
 
             <!--begin::Menu item-->
             <div class="menu-item px-5">

@@ -26,26 +26,14 @@
                 <a href="{{action([$controller,'azioni'],['id'=>$record->id,'azione'=>'impersona'])}}"
                    class="menu-link px-3 azione">Impersona</a>
             </div>
-            @if(false)
-                <div class="menu-item px-3">
-                    <div class="menu-content text-muted pb-2 px-3 fs-7 text-uppercase">Condomini</div>
-                </div>
-
-                <div class="menu-item px-3">
-                    <a data-target="kt_modal" data-toggle="modal-ajax"
-                       class="menu-link px-3"
-                       href="{{action([\App\Http\Controllers\Backend\ModalController::class,'show'],['modal'=>'importa-condomini','id'=>$record->id])}}">
-                        Importa da Excel</a>
-                </div>
-                <div class="separator mt-3 opacity-75"></div>
-                <div class="menu-item px-3">
-                    <div class="menu-content text-muted pb-2 px-3 fs-7 text-uppercase">Allegati</div>
-                </div>
-                <div class="menu-item px-3">
-                    <a href="{{action([\App\Http\Controllers\Backend\AllegatoCondominioController::class,'create'],['condominioId'=>$record->id])}}"
-                       class="menu-link px-3">Carica allegato</a>
-                </div>
-            @endif
+            <div class="menu-item px-3">
+                <a href="{{action([$controller,'azioni'],['id'=>$record->id,'azione'=>'resetta-password'])}}"
+                   class="menu-link px-3 azione">Resetta password 123456</a>
+            </div>
+            <div class="menu-item px-3">
+                <a href="{{action([$controller,'azioni'],['id'=>$record->id,'azione'=>'invia-mail-password-reset'])}}"
+                   class="menu-link px-3 azione">Invia mail password reset</a>
+            </div>
         </div>
         <!--end::Menu 3-->
     </div>

@@ -21,6 +21,11 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/spedizione-download/{id}', [\App\Http\Controllers\Frontend\SpedizioneController::class, 'downloadAllegato']);
 
 
+    //Dati utente
+    Route::get('/dati-utente', [\App\Http\Controllers\Frontend\DatiUtenteController::class, 'show']);
+    Route::patch('/dati-utente/{cosa}', [\App\Http\Controllers\Frontend\DatiUtenteController::class, 'update']);
+
+
 });
 
 

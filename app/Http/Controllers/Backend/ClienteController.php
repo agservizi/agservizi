@@ -204,10 +204,6 @@ class ClienteController extends Controller
             return ['success' => false, 'message' => 'Questo utente non esiste'];
         }
         switch ($azione) {
-            case 'sospendi':
-                $p = Permission::findByName('sospeso');
-                $u->syncPermissions([$p]);
-                return ['success' => true, 'redirect' => action([OperatoreController::class, 'index'])];
 
             case 'impersona':
                 return $this->azioneImpersona($id);
@@ -220,7 +216,6 @@ class ClienteController extends Controller
                 $user->password = bcrypt('123456');
                 $user->save();
                 return ['success' => true, 'title' => 'Password impostata', 'message' => 'La password è stata impostata a 123456'];
-
 
         }
 

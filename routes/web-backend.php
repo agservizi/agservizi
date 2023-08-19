@@ -44,13 +44,6 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
     Route::get('/dati-utente', [\App\Http\Controllers\Backend\DatiUtenteController::class, 'show']);
     Route::patch('/dati-utente/{cosa}', [\App\Http\Controllers\Backend\DatiUtenteController::class, 'update']);
 
-    //Tabelle
-
-
-    //Operatore
-    Route::get('/operatore-tab/{id}/tab/{tab}', [\App\Http\Controllers\Backend\OperatoreController::class, 'tab']);
-    Route::resource('/operatore', \App\Http\Controllers\Backend\OperatoreController::class);
-    Route::post('/operatore/{id}/azione/{azione}', [\App\Http\Controllers\Backend\OperatoreController::class, 'azioni']);
 
 
 });

@@ -51,6 +51,12 @@ class RegistriController extends Controller
                 }
                 return $this->backupDatabase();
 
+            case 'reset-cache':
+                \Artisan::call('config:clear');
+                \Artisan::call('route:cache');
+
+                dd('ok');
+
 
         }
 

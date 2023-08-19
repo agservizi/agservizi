@@ -77,6 +77,12 @@
                             <span class="menu-title">Log viewer</span>
                         </a>
                     </div>
+                    <div class="menu-item">
+                        <a class="menu-link"
+                           href="{{action([\App\Http\Controllers\Backend\RegistriController::class,'index'],'reset-cache')}}">
+                            <span class="menu-title">Reset cache config e routes</span>
+                        </a>
+                    </div>
                 @endif
 
             </div>

@@ -10,7 +10,7 @@ return [
     'accessi_test' => [
         ['descrizione' => 'Admin', 'email' => 'admin@admin.com', 'password' => 'password'],
     ],
-    'url_online'=>null,
+    'url_online'=>'https://app.agenziaplinio.it',
 
     'primoAnno' => 2023,
 
