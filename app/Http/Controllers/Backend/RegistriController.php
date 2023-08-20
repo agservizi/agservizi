@@ -132,29 +132,6 @@ class RegistriController extends Controller
     }
 
 
-    protected function registroEmail($request)
-    {
-
-        if ($request->has('id')) {
-            return view('Backend.Registri.showEmail')->with([
-                'email' => RegistroEmail::find($request->input('id'))
-            ]);
-        }
-
-        $filtro = false;
-        $recordsQB = RegistroEmail::orderBy('id', 'desc');
-        if ($request->input('giorno')) {
-            $recordsQB->whereDate('data', Carbon::createFromFormat('d/m/Y', $request->input('giorno')));
-            $filtro = true;
-        }
-
-        return view('Backend.Registri.indexEmail')->with([
-            'records' => $recordsQB->paginate(100),
-            'filtro' => $filtro
-        ]);
-
-    }
-
     protected function backupDatabase()
     {
         $statuses = BackupDestinationStatusFactory::createForMonitorConfig(config('backup.monitor_backups'));
