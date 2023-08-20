@@ -40,11 +40,8 @@ class RegistriController extends Controller
                         'Content-Type' => 'application/zip',
                         'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
                     ];
-
                     return \Response::make(Storage::disk(config('backup.backup.destination.disks')[0])->get($path_to_file), 200, $headers);
 
-
-                    return response()->download(Storage::disk(config('backup.destination.disks')[0])->get($path_to_file), $fileName);
                 }
                 if ($request->has('esegui')) {
                     \Artisan::call('backup:run --only-db --disable-notifications');
