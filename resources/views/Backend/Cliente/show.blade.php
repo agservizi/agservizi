@@ -14,14 +14,15 @@
             <div class="menu-item px-3">
                 <div class="menu-content text-muted pb-2 px-3 fs-7 text-uppercase">Azioni</div>
             </div>
-            <!--end::Heading-->
-            <div class="menu-item px-3">
-                <a data-targetZ="kt_modal" data-toggleZ="modal-ajax"
-                   class="menu-link px-3"
-                   href="{{action([$controller,'edit'],$record->id)}}">Modifica</a>
-            </div>
-
-            <div class="separator mt-3 mb-3 opacity-75"></div>
+            @if(false)
+                <!--end::Heading-->
+                <div class="menu-item px-3">
+                    <a data-targetZ="kt_modal" data-toggleZ="modal-ajax"
+                       class="menu-link px-3"
+                       href="{{action([$controller,'edit'],$record->id)}}">Modifica</a>
+                </div>
+                <div class="separator mt-3 mb-3 opacity-75"></div>
+            @endif
             <div class="menu-item px-3">
                 <a href="{{action([$controller,'azioni'],['id'=>$record->id,'azione'=>'impersona'])}}"
                    class="menu-link px-3 azione">Impersona</a>
