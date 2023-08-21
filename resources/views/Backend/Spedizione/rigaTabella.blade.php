@@ -29,7 +29,7 @@
             <a data-targetZ="kt_modal" data-toggleZ="modal-ajax"
                class="btn btn-sm btn-light btn-active-light-primary"
                href="{{action([$controller,'edit'],$record->id)}}">Modifica</a>
-            <a href="{{action([$controller,'pdf'],$record->id)}}" class="btn btn-sm btn-icon btn-light btn-color-gray-700 btn-active-primary">
+            <a href="{{action([$controller,'pdf'],$record->id)}}" class="btn btn-sm btn-icon btn-light btn-color-gray-700 btn-active-light-success" target="_blank">
                 <i class="fa-solid fa-print"></i>
             </a>
 
