@@ -4,18 +4,17 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Http\MieClassi\DatiRitorno;
-use App\Models\AllegatoCafPatronato;
 use App\Models\AllegatoSpedizione;
 use App\Models\Cliente;
 use App\Models\StatoSpedizione;
-use App\Models\User;
 use App\Notifications\NotificaAlNuovoCliente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Spedizione;
 use DB;
 use Illuminate\Support\Str;
-use Illuminate\Testing\Fluent\Concerns\Has;
+use PDF;
+
 
 class SpedizioneController extends Controller
 {
@@ -314,6 +313,31 @@ class SpedizioneController extends Controller
         abort_if(!$record, 404, 'Questo allegato non esiste');
 
         return response()->download(\Storage::path($record->path_filename), $record->filename_originale);
+
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\Response
+     */
+    public function pdf($id)
+    {
+        $record = Spedizione::find($id);
+        abort_if(!$record, 404, 'Questa spedizione non esiste');
+
+
+        $pdf = PDF::loadView('Backend.Spedizione.pdf', [
+            'record' => $record,
+        ])->setPaper('a5','landscape');
+
+
+
+
+
+        return $pdf->stream('aa.pdf');
+
 
     }
 

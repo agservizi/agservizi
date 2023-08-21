@@ -13,6 +13,7 @@ Route::group(['middleware' => ['auth', 'role_or_permission:admin']], function ()
     Route::post('spedizione-upload/{cosa}/{id}',[\App\Http\Controllers\Backend\SpedizioneController::class,'uploadAllegato']);
     Route::delete('spedizione-upload/',[\App\Http\Controllers\Backend\SpedizioneController::class,'deleteAllegato']);
     Route::get('/spedizione-download/{id}', [\App\Http\Controllers\Backend\SpedizioneController::class, 'downloadAllegato']);
+    Route::get('spedizione/{id}/pdf', [\App\Http\Controllers\Backend\SpedizioneController::class, 'pdf']);
 
     //select2
     Route::get('select2', [\App\Http\Controllers\Backend\Select2::class, 'response']);

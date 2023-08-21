@@ -3,14 +3,14 @@
 return [
 
 
-    'tag_title' => 'Area Clienti',
+    'tag_title' => env('APP_NAME'),
     'log_rocket' => '',
 
-    'mostra_accessi_test'=>false,
+    'mostra_accessi_test' => false,
     'accessi_test' => [
         ['descrizione' => 'Admin', 'email' => 'admin@admin.com', 'password' => 'password'],
     ],
-    'url_online'=>'https://app.agenziaplinio.it',
+    'url_online' => 'https://app.agenziaplinio.it',
 
     'primoAnno' => 2023,
 
@@ -31,6 +31,5 @@ return [
     'allegati_spedizioni' => [
         'cartella' => '/allegati_spedizioni',
     ],
-
 
 ];
