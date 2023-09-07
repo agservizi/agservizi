@@ -40,7 +40,7 @@ class SpedizioneController extends Controller
             }],
 
             'nominativo' => ['testo' => 'Nominativo', 'filtro' => function ($q) {
-                return $q->orderBy('cognome')->orderBy('nome');
+                return $q->orderBy(Cliente::select('cognome')->whereColumn('users.id','spedizioni.cliente_id'));
             }]
 
         ];
