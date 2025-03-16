@@ -910,7 +910,7 @@ if ($result && $result->num_rows > 0) {
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <img src="/admin/logo-aziendale.png" alt="Agenzia Plinio Logo" class="sidebar-logo">
+                <img src="../images/logo.svg" alt="Agenzia Plinio Logo" class="sidebar-logo">
                 <button class="sidebar-toggle">
                     <i class="fas fa-times"></i>
                 </button>
@@ -919,7 +919,7 @@ if ($result && $result->num_rows > 0) {
                 <div class="sidebar-menu-category">Dashboard</div>
                 <ul>
                     <li class="sidebar-menu-item">
-                        <a href="/admin/dashboard.php" class="sidebar-menu-link active">
+                        <a href="dashboard.php" class="sidebar-menu-link active">
                             <i class="fas fa-tachometer-alt"></i>
                             <span>Dashboard</span>
                         </a>
@@ -929,19 +929,19 @@ if ($result && $result->num_rows > 0) {
                 <div class="sidebar-menu-category">Gestione</div>
                 <ul>
                     <li class="sidebar-menu-item">
-                        <a href="/admim/users.php" class="sidebar-menu-link">
+                        <a href="users.php" class="sidebar-menu-link">
                             <i class="fas fa-users"></i>
                             <span>Utenti</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
-                        <a href="/admin/services.php" class="sidebar-menu-link">
+                        <a href="services.php" class="sidebar-menu-link">
                             <i class="fas fa-cogs"></i>
                             <span>Servizi</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
-                        <a href="/admin/contacts.php" class="sidebar-menu-link">
+                        <a href="contacts.php" class="sidebar-menu-link">
                             <i class="fas fa-envelope"></i>
                             <span>Messaggi</span>
                             <?php if ($unread_messages_count > 0): ?>
@@ -950,7 +950,7 @@ if ($result && $result->num_rows > 0) {
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
-                        <a href="/admin/blog.php" class="sidebar-menu-link">
+                        <a href="blog.php" class="sidebar-menu-link">
                             <i class="fas fa-blog"></i>
                             <span>Blog</span>
                         </a>
@@ -960,19 +960,19 @@ if ($result && $result->num_rows > 0) {
                 <div class="sidebar-menu-category">Impostazioni</div>
                 <ul>
                     <li class="sidebar-menu-item">
-                        <a href="/admin/profile.php" class="sidebar-menu-link">
+                        <a href="profile.php" class="sidebar-menu-link">
                             <i class="fas fa-user"></i>
                             <span>Profilo</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
-                        <a href="/admin/settings.php" class="sidebar-menu-link">
+                        <a href="settings.php" class="sidebar-menu-link">
                             <i class="fas fa-cog"></i>
                             <span>Impostazioni</span>
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
-                        <a href="admin/logout.php" class="sidebar-menu-link">
+                        <a href="logout.php" class="sidebar-menu-link">
                             <i class="fas fa-sign-out-alt"></i>
                             <span>Logout</span>
                         </a>

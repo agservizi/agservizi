@@ -109,13 +109,8 @@ $param_types .= "ii";
 
 // Esecuzione query per il conteggio totale
 $count_stmt = $conn->prepare($count_query);
-if (!empty($param_types)) {
-    $count_param_types = str_replace('ii', '', $param_types); // Rimuoviamo i parametri di limit e offset
-    $count_params = array_slice($params, 0, -2); // Rimuoviamo i valori di limit e offset
-    
-    if (!empty($count_params)) {
-        $count_stmt->bind_param($count_param_types, ...$count_params);
-    }
+if (!empty($params)) {
+    $count_stmt->bind_param($param_types, ...$params);
 }
 $count_stmt->execute();
 $count_result = $count_stmt->get_result();
@@ -127,24 +122,21 @@ $total_pages = ceil($total_items / $items_per_page);
 
 // Esecuzione query per i dati
 $stmt = $conn->prepare($query);
-if (!empty($param_types)) {
+if (!empty($params)) {
+    // Rimuoviamo gli ultimi due parametri (offset e limit) per ricostruire correttamente
+    array_pop($params);
+    array_pop($params);
+    $param_types = substr($param_types, 0, -2);
+    
+    // Aggiungiamo offset e limit
+    $params[] = $offset;
+    $params[] = $items_per_page;
+    $param_types .= "ii";
+    
     $stmt->bind_param($param_types, ...$params);
 }
 $stmt->execute();
 $result = $stmt->get_result();
-
-// Conteggio articoli per stato
-$status_counts = [
-    'all' => $total_items,
-    'published' => 0,
-    'draft' => 0
-];
-
-$status_count_query = "SELECT status, COUNT(*) as count FROM blog_posts GROUP BY status";
-$status_count_result = $conn->query($status_count_query);
-while ($status_row = $status_count_result->fetch_assoc()) {
-    $status_counts[$status_row['status']] = $status_row['count'];
-}
 
 // Titolo della pagina
 $page_title = "Gestione Blog";
@@ -167,24 +159,21 @@ $page_title = "Gestione Blog";
             <?php include 'includes/header.php'; ?>
             
             <main class="main-content">
-                <div class="page-header">
-                    <div>
-                        <h1><?php echo $page_title; ?></h1>
-                        <p class="text-muted">Gestisci gli articoli del tuo blog</p>
-                    </div>
-                    <div class="action-buttons">
-                        <a href="../blog.php" class="btn btn-secondary" target="_blank">
-                            <i class="fas fa-eye"></i> Visualizza Blog
-                        </a>
-                        <a href="add-post.php" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Nuovo Articolo
-                        </a>
-                    </div>
-                </div>
+                
+<div class="page-header">
+    <h1><?php echo $page_title; ?></h1>
+    <div class="action-buttons">
+        <a href="../blog.php" class="btn btn-secondary" target="_blank">
+            <i class="fas fa-eye"></i> Visualizza Blog
+        </a>
+        <a href="add-post.php" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nuovo Articolo
+        </a>
+    </div>
+</div>
                 
                 <?php if (isset($_SESSION['success_message'])): ?>
                     <div class="alert alert-success">
-                        <i class="fas fa-check-circle"></i>
                         <?php 
                         echo $_SESSION['success_message']; 
                         unset($_SESSION['success_message']);
@@ -194,7 +183,6 @@ $page_title = "Gestione Blog";
                 
                 <?php if (isset($_SESSION['error_message'])): ?>
                     <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle"></i>
                         <?php 
                         echo $_SESSION['error_message']; 
                         unset($_SESSION['error_message']);
@@ -202,56 +190,25 @@ $page_title = "Gestione Blog";
                     </div>
                 <?php endif; ?>
                 
-                <div class="dashboard-stats">
-                    <div class="stat-card">
-                        <div class="stat-card-icon blog-all">
-                            <i class="fas fa-newspaper"></i>
-                        </div>
-                        <div class="stat-card-content">
-                            <h3>Tutti gli articoli</h3>
-                            <p><?php echo $status_counts['all']; ?></p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-card-icon blog-published">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div class="stat-card-content">
-                            <h3>Pubblicati</h3>
-                            <p><?php echo $status_counts['published'] ?? 0; ?></p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-card-icon blog-draft">
-                            <i class="fas fa-edit"></i>
-                        </div>
-                        <div class="stat-card-content">
-                            <h3>Bozze</h3>
-                            <p><?php echo $status_counts['draft'] ?? 0; ?></p>
-                        </div>
-                    </div>
-                </div>
-                
                 <div class="card">
                     <div class="card-header">
                         <h2>Articoli del Blog</h2>
                         
-                        <div class="filters-container">
+                        <div class="filters">
                             <form action="" method="GET" class="filter-form">
-                                <div class="filters">
-                                    <div class="form-group">
-                                        <select name="status" class="form-control" onchange="this.form.submit()">
-                                            <option value="">Tutti gli stati</option>
-                                            <option value="published" <?php echo $status_filter === 'published' ? 'selected' : ''; ?>>Pubblicati</option>
-                                            <option value="draft" <?php echo $status_filter === 'draft' ? 'selected' : ''; ?>>Bozze</option>
-                                        </select>
-                                    </div>
+                                <div class="form-group">
+                                    <select name="status" class="form-control">
+                                        <option value="">Tutti gli stati</option>
+                                        <option value="published" <?php echo $status_filter === 'published' ? 'selected' : ''; ?>>Pubblicati</option>
+                                        <option value="draft" <?php echo $status_filter === 'draft' ? 'selected' : ''; ?>>Bozze</option>
+                                    </select>
                                 </div>
                                 
-                                <div class="search">
-                                    <i class="fas fa-search"></i>
+                                <div class="form-group search-group">
                                     <input type="text" name="search" placeholder="Cerca articoli..." value="<?php echo htmlspecialchars($search_query); ?>" class="form-control">
-                                    <button type="submit" class="btn btn-sm btn-primary">Cerca</button>
+                                    <button type="submit" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-search"></i>
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -263,13 +220,13 @@ $page_title = "Gestione Blog";
                                 <table class="table">
                                     <thead>
                                         <tr>
-                                            <th width="5%">ID</th>
-                                            <th width="10%">Immagine</th>
-                                            <th width="30%">Titolo</th>
-                                            <th width="15%">Autore</th>
-                                            <th width="15%">Data</th>
-                                            <th width="10%">Stato</th>
-                                            <th width="15%">Azioni</th>
+                                            <th>ID</th>
+                                            <th>Immagine</th>
+                                            <th>Titolo</th>
+                                            <th>Autore</th>
+                                            <th>Data</th>
+                                            <th>Stato</th>
+                                            <th>Azioni</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -283,25 +240,9 @@ $page_title = "Gestione Blog";
                                                         <div class="no-image">No Image</div>
                                                     <?php endif; ?>
                                                 </td>
-                                                <td>
-                                                    <div class="post-title"><?php echo htmlspecialchars($row['title']); ?></div>
-                                                    <?php if (!empty($row['slug'])): ?>
-                                                        <div class="post-slug"><?php echo htmlspecialchars($row['slug']); ?></div>
-                                                    <?php endif; ?>
-                                                </td>
+                                                <td><?php echo htmlspecialchars($row['title']); ?></td>
                                                 <td><?php echo htmlspecialchars($row['author_name']); ?></td>
-                                                <td>
-                                                    <div class="post-date">
-                                                        <i class="far fa-calendar-alt"></i>
-                                                        <?php echo date('d/m/Y', strtotime($row['created_at'])); ?>
-                                                    </div>
-                                                    <?php if ($row['created_at'] != $row['updated_at']): ?>
-                                                        <div class="post-date updated">
-                                                            <i class="far fa-edit"></i>
-                                                            <?php echo date('d/m/Y', strtotime($row['updated_at'])); ?>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                </td>
+                                                <td><?php echo date('d/m/Y', strtotime($row['created_at'])); ?></td>
                                                 <td>
                                                     <span class="status-badge <?php echo $row['status'] === 'published' ? 'status-active' : 'status-inactive'; ?>">
                                                         <?php echo $row['status'] === 'published' ? 'Pubblicato' : 'Bozza'; ?>
@@ -335,31 +276,7 @@ $page_title = "Gestione Blog";
                                         </a>
                                     <?php endif; ?>
                                     
-                                    <div class="pagination-numbers">
-                                        <?php
-                                        $start_page = max(1, $current_page - 2);
-                                        $end_page = min($total_pages, $current_page + 2);
-                                        
-                                        if ($start_page > 1) {
-                                            echo '<a href="?page=1' . (!empty($status_filter) ? '&status=' . $status_filter : '') . (!empty($search_query) ? '&search=' . urlencode($search_query) : '') . '" class="pagination-number">1</a>';
-                                            if ($start_page > 2) {
-                                                echo '<span class="pagination-ellipsis">...</span>';
-                                            }
-                                        }
-                                        
-                                        for ($i = $start_page; $i <= $end_page; $i++) {
-                                            $active_class = ($i === $current_page) ? 'active' : '';
-                                            echo '<a href="?page=' . $i . (!empty($status_filter) ? '&status=' . $status_filter : '') . (!empty($search_query) ? '&search=' . urlencode($search_query) : '') . '" class="pagination-number ' . $active_class . '">' . $i . '</a>';
-                                        }
-                                        
-                                        if ($end_page < $total_pages) {
-                                            if ($end_page < $total_pages - 1) {
-                                                echo '<span class="pagination-ellipsis">...</span>';
-                                            }
-                                            echo '<a href="?page=' . $total_pages . (!empty($status_filter) ? '&status=' . $status_filter : '') . (!empty($search_query) ? '&search=' . urlencode($search_query) : '') . '" class="pagination-number">' . $total_pages . '</a>';
-                                        }
-                                        ?>
-                                    </div>
+                                    <span class="pagination-info">Pagina <?php echo $current_page; ?> di <?php echo $total_pages; ?></span>
                                     
                                     <?php if ($current_page < $total_pages): ?>
                                         <a href="?page=<?php echo $current_page + 1; ?><?php echo !empty($status_filter) ? '&status=' . $status_filter : ''; ?><?php echo !empty($search_query) ? '&search=' . urlencode($search_query) : ''; ?>" class="btn btn-sm btn-outline">

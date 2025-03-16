@@ -1,29 +1,26 @@
 <?php
-session_start();
 require_once 'includes/db_connect.php';
 require_once 'includes/functions.php';
 
-// Rimuoviamo qualsiasi controllo di autenticazione da questa pagina pubblica
-// La pagina blog-single.php deve essere accessibile a tutti i visitatori
+// Ottieni lo slug dell'articolo dall'URL
+$slug = isset($_GET['slug']) ? sanitize_input($_GET['slug']) : '';
 
-// Verifica che l'ID dell'articolo sia presente
-if (!isset($_GET['id']) || empty($_GET['id'])) {
+if (empty($slug)) {
     header('Location: blog.php');
     exit;
 }
 
-$post_id = intval($_GET['id']);
+// Query per ottenere l'articolo
+$query = "SELECT bp.*, u.name as author_name 
+          FROM blog_posts bp 
+          LEFT JOIN users u ON bp.author_id = u.id 
+          WHERE bp.slug = ? AND bp.status = 'published'";
 
-// Ottieni i dettagli dell'articolo
-$stmt = $conn->prepare("SELECT b.*, u.username as author_name 
-                        FROM blog_posts b 
-                        LEFT JOIN users u ON b.author_id = u.id 
-                        WHERE b.id = ? AND b.status = 'published'");
-$stmt->bind_param("i", $post_id);
+$stmt = $conn->prepare($query);
+$stmt->bind_param("s", $slug);
 $stmt->execute();
 $result = $stmt->get_result();
 
-// Se l'articolo non esiste o non è pubblicato, reindirizza al blog
 if ($result->num_rows === 0) {
     header('Location: blog.php');
     exit;
@@ -31,61 +28,17 @@ if ($result->num_rows === 0) {
 
 $post = $result->fetch_assoc();
 
-// Incrementa il contatore visualizzazioni
-$update_stmt = $conn->prepare("UPDATE blog_posts SET views = views + 1 WHERE id = ?");
-$update_stmt->bind_param("i", $post_id);
-$update_stmt->execute();
+// Ottieni articoli correlati (stessa categoria o tag, da implementare in futuro)
+// Per ora mostriamo semplicemente altri articoli recenti
+$recent_posts = get_recent_posts($conn, 4);
 
-// Articoli recenti per la sidebar
-$recent_posts_query = "SELECT * FROM blog_posts WHERE status = 'published' AND id != ? ORDER BY created_at DESC LIMIT 5";
-$recent_stmt = $conn->prepare($recent_posts_query);
-$recent_stmt->bind_param("i", $post_id);
-$recent_stmt->execute();
-$recent_result = $recent_stmt->get_result();
-$recent_posts = [];
-if ($recent_result && $recent_result->num_rows > 0) {
-    while ($row = $recent_result->fetch_assoc()) {
-        $recent_posts[] = $row;
-    }
-}
+// Incrementa il contatore di visualizzazioni
+$update_query = "UPDATE blog_posts SET views = views + 1 WHERE id = ?";
+$stmt = $conn->prepare($update_query);
+$stmt->bind_param("i", $post['id']);
+$stmt->execute();
 
-// Articoli correlati
-$related_query = "SELECT * FROM blog_posts WHERE status = 'published' AND id != ? ORDER BY RAND() LIMIT 3";
-$related_stmt = $conn->prepare($related_query);
-$related_stmt->bind_param("i", $post_id);
-$related_stmt->execute();
-$related_result = $related_stmt->get_result();
-$related_posts = [];
-if ($related_result && $related_result->num_rows > 0) {
-    while ($row = $related_result->fetch_assoc()) {
-        $related_posts[] = $row;
-    }
-}
-
-// Articolo precedente e successivo
-$prev_post = null;
-$next_post = null;
-
-$prev_query = "SELECT id, title, slug FROM blog_posts WHERE id < ? AND status = 'published' ORDER BY id DESC LIMIT 1";
-$prev_stmt = $conn->prepare($prev_query);
-$prev_stmt->bind_param("i", $post_id);
-$prev_stmt->execute();
-$prev_result = $prev_stmt->get_result();
-if ($prev_result && $prev_result->num_rows > 0) {
-    $prev_post = $prev_result->fetch_assoc();
-}
-
-$next_query = "SELECT id, title, slug FROM blog_posts WHERE id > ? AND status = 'published' ORDER BY id ASC LIMIT 1";
-$next_stmt = $conn->prepare($next_query);
-$next_stmt->bind_param("i", $post_id);
-$next_stmt->execute();
-$next_result = $next_stmt->get_result();
-if ($next_result && $next_result->num_rows > 0) {
-    $next_post = $next_result->fetch_assoc();
-}
-
-// Titolo della pagina
-$page_title = htmlspecialchars($post['title']);
+$page_title = $post['title'] . " - Agenzia Plinio";
 ?>
 
 <!DOCTYPE html>
@@ -93,163 +46,308 @@ $page_title = htmlspecialchars($post['title']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $page_title; ?> - AG Servizi</title>
+    <title><?php echo $page_title; ?></title>
+    <meta name="description" content="<?php echo htmlspecialchars($post['excerpt']); ?>">
     
-    <!-- Meta tags per SEO e condivisione social -->
-    <meta name="description" content="<?php echo htmlspecialchars(substr(strip_tags($post['excerpt']), 0, 160)); ?>">
-    <meta property="og:title" content="<?php echo $page_title; ?> - AG Servizi">
-    <meta property="og:description" content="<?php echo htmlspecialchars(substr(strip_tags($post['excerpt']), 0, 160)); ?>">
-    <?php if (!empty($post['featured_image']) && file_exists("uploads/blog/" . $post['featured_image'])): ?>
-        <meta property="og:image" content="<?php echo 'https://' . $_SERVER['HTTP_HOST'] . '/uploads/blog/' . $post['featured_image']; ?>">
-    <?php endif; ?>
-    <meta property="og:url" content="<?php echo 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']; ?>">
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="article">
+    <meta property="og:url" content="<?php echo "https://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"; ?>">
+    <meta property="og:title" content="<?php echo htmlspecialchars($post['title']); ?>">
+    <meta property="og:description" content="<?php echo htmlspecialchars($post['excerpt']); ?>">
+    <?php if (!empty($post['featured_image'])): ?>
+    <meta property="og:image" content="<?php echo "https://$_SERVER[HTTP_HOST]/uploads/blog/" . htmlspecialchars($post['featured_image']); ?>">
+    <?php endif; ?>
     
-    <!-- Favicon -->
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="<?php echo "https://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"; ?>">
+    <meta property="twitter:title" content="<?php echo htmlspecialchars($post['title']); ?>">
+    <meta property="twitter:description" content="<?php echo htmlspecialchars($post['excerpt']); ?>">
+    <?php if (!empty($post['featured_image'])): ?>
+    <meta property="twitter:image" content="<?php echo "https://$_SERVER[HTTP_HOST]/uploads/blog/" . htmlspecialchars($post['featured_image']); ?>">
+    <?php endif; ?>
     
-    <!-- CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
     <!-- Header -->
-    <?php include 'includes/header.php'; ?>
-    
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <a href="index.html">
+                    <img src="images/logo.svg" alt="Agenzia Plinio Logo">
+                </a>
+            </div>
+            <nav class="main-nav">
+                <button class="mobile-menu-toggle">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </button>
+                <ul class="nav-list">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="chi-siamo.html">Chi Siamo</a></li>
+                    <li class="dropdown">
+                        <a href="servizi.html">Servizi</a>
+                        <ul class="dropdown-menu">
+                            <li><a href="servizi-pagamenti.html">Pagamenti</a></li>
+                            <li><a href="servizi-spedizioni.html">Spedizioni</a></li>
+                            <li><a href="servizi-telefonia.html">Telefonia</a></li>
+                            <li><a href="servizi-energia.html">Energia</a></li>
+                            <li><a href="servizi-spid.html">SPID</a></li>
+                            <li><a href="servizi-pec.html">PEC</a></li>
+                            <li><a href="servizi-firma-digitale.html">Firma Digitale</a></li>
+                            <li><a href="servizi-visure.html">Visure</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="contatti.html">Contatti</a></li>
+                    <li><a href="blog.php" class="active">Blog</a></li>
+                    <li><a href="login.php" class="btn btn-outline">Area Clienti</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <h1><?php echo htmlspecialchars($post['title']); ?></h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="blog.php">Blog</a></li>
+                    <li class="active"><?php echo htmlspecialchars($post['title']); ?></li>
+                </ol>
+            </nav>
+        </div>
+    </section>
+
     <!-- Blog Single Content -->
-    <section class="blog-single">
+    <section class="blog-single-section">
         <div class="container">
             <div class="blog-container">
                 <div class="blog-main">
-                    <article class="blog-post" data-aos="fade-up">
-                        <header class="post-header">
-                            <h1><?php echo htmlspecialchars($post['title']); ?></h1>
-                            <div class="post-meta">
-                                <span><i class="fas fa-user"></i> <?php echo htmlspecialchars($post['author_name']); ?></span>
-                                <span><i class="fas fa-calendar"></i> <?php echo date('d/m/Y', strtotime($post['created_at'])); ?></span>
-                                <span><i class="fas fa-eye"></i> <?php echo $post['views']; ?> visualizzazioni</span>
-                            </div>
-                        </header>
-                        
-                        <?php if (!empty($post['featured_image']) && file_exists("uploads/blog/" . $post['featured_image'])): ?>
-                            <div class="post-featured-image">
-                                <img src="uploads/blog/<?php echo $post['featured_image']; ?>" alt="<?php echo htmlspecialchars($post['title']); ?>">
-                            </div>
+                    <article class="blog-single" data-aos="fade-up">
+                        <?php if (!empty($post['featured_image'])): ?>
+                        <div class="blog-featured-image">
+                            <img src="uploads/blog/<?php echo htmlspecialchars($post['featured_image']); ?>" alt="<?php echo htmlspecialchars($post['title']); ?>">
+                        </div>
                         <?php endif; ?>
                         
-                        <div class="post-content">
+                        <div class="blog-meta">
+                            <span class="blog-date"><i class="far fa-calendar-alt"></i> <?php echo date('d/m/Y', strtotime($post['created_at'])); ?></span>
+                            <span class="blog-author"><i class="far fa-user"></i> <?php echo htmlspecialchars($post['author_name']); ?></span>
+                            <span class="blog-views"><i class="far fa-eye"></i> <?php echo $post['views']; ?> visualizzazioni</span>
+                        </div>
+                        
+                        <div class="blog-content">
                             <?php echo $post['content']; ?>
                         </div>
                         
-                        <div class="post-share">
+                        <div class="blog-share">
                             <span>Condividi:</span>
-                            <a href="https://www.facebook.com/sharer/sharer.php?u=<?php echo urlencode('https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']); ?>" target="_blank" class="facebook">
-                                <i class="fab fa-facebook-f"></i>
-                            </a>
-                            <a href="https://twitter.com/intent/tweet?url=<?php echo urlencode('https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']); ?>&text=<?php echo urlencode($post['title']); ?>" target="_blank" class="twitter">
-                                <i class="fab fa-twitter"></i>
-                            </a>
-                            <a href="https://www.linkedin.com/shareArticle?mini=true&url=<?php echo urlencode('https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']); ?>&title=<?php echo urlencode($post['title']); ?>" target="_blank" class="linkedin">
-                                <i class="fab fa-linkedin-in"></i>
-                            </a>
-                            <a href="https://wa.me/?text=<?php echo urlencode($post['title'] . ' - https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']); ?>" target="_blank" class="whatsapp">
-                                <i class="fab fa-whatsapp"></i>
-                            </a>
+                            <div class="social-share">
+                                <a href="https://www.facebook.com/sharer/sharer.php?u=<?php echo urlencode("https://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"); ?>" target="_blank" aria-label="Condividi su Facebook"><i class="fab fa-facebook-f"></i></a>
+                                <a href="https://twitter.com/intent/tweet?url=<?php echo urlencode("https://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"); ?>&text=<?php echo urlencode($post['title']); ?>" target="_blank" aria-label="Condividi su Twitter"><i class="fab fa-twitter"></i></a>
+                                <a href="https://www.linkedin.com/shareArticle?mini=true&url=<?php echo urlencode("https://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"); ?>&title=<?php echo urlencode($post['title']); ?>" target="_blank" aria-label="Condividi su LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                                <a href="https://api.whatsapp.com/send?text=<?php echo urlencode($post['title'] . " - https://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"); ?>" target="_blank" aria-label="Condividi su WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                            </div>
                         </div>
                     </article>
                     
                     <!-- Post Navigation -->
                     <div class="post-navigation" data-aos="fade-up">
-                        <?php if ($prev_post): ?>
-                            <a href="blog-single.php?id=<?php echo $prev_post['id']; ?>&slug=<?php echo $prev_post['slug']; ?>" class="prev-post">
-                                <i class="fas fa-chevron-left"></i>
-                                <span>Articolo precedente</span>
+                        <?php
+                        // Query per ottenere il post precedente
+                        $prev_query = "SELECT id, title, slug FROM blog_posts WHERE created_at < ? AND status = 'published' ORDER BY created_at DESC LIMIT 1";
+                        $stmt = $conn->prepare($prev_query);
+                        $stmt->bind_param("s", $post['created_at']);
+                        $stmt->execute();
+                        $prev_result = $stmt->get_result();
+                        $prev_post = $prev_result->fetch_assoc();
+                        
+                        // Query per ottenere il post successivo
+                        $next_query = "SELECT id, title, slug FROM blog_posts WHERE created_at > ? AND status = 'published' ORDER BY created_at ASC LIMIT 1";
+                        $stmt = $conn->prepare($next_query);
+                        $stmt->bind_param("s", $post['created_at']);
+                        $stmt->execute();
+                        $next_result = $stmt->get_result();
+                        $next_post = $next_result->fetch_assoc();
+                        ?>
+                        
+                        <div class="post-nav prev">
+                            <?php if ($prev_post): ?>
+                            <a href="blog-single.php?slug=<?php echo htmlspecialchars($prev_post['slug']); ?>">
+                                <span><i class="fas fa-chevron-left"></i> Articolo Precedente</span>
                                 <h4><?php echo htmlspecialchars($prev_post['title']); ?></h4>
                             </a>
-                        <?php else: ?>
-                            <div class="prev-post empty"></div>
-                        <?php endif; ?>
+                            <?php else: ?>
+                            <div class="nav-placeholder"></div>
+                            <?php endif; ?>
+                        </div>
                         
-                        <?php if ($next_post): ?>
-                            <a href="blog-single.php?id=<?php echo $next_post['id']; ?>&slug=<?php echo $next_post['slug']; ?>" class="next-post">
-                                <span>Articolo successivo</span>
+                        <div class="post-nav next">
+                            <?php if ($next_post): ?>
+                            <a href="blog-single.php?slug=<?php echo htmlspecialchars($next_post['slug']); ?>">
+                                <span>Articolo Successivo <i class="fas fa-chevron-right"></i></span>
                                 <h4><?php echo htmlspecialchars($next_post['title']); ?></h4>
-                                <i class="fas fa-chevron-right"></i>
                             </a>
-                        <?php else: ?>
-                            <div class="next-post empty"></div>
-                        <?php endif; ?>
+                            <?php else: ?>
+                            <div class="nav-placeholder"></div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     
                     <!-- Related Posts -->
-                    <?php if (!empty($related_posts)): ?>
-                        <div class="related-posts" data-aos="fade-up">
-                            <h3>Articoli correlati</h3>
-                            <div class="related-posts-grid">
-                                <?php foreach ($related_posts as $related): ?>
-                                    <article class="related-post">
-                                        <div class="related-post-image">
-                                            <?php if (!empty($related['featured_image']) && file_exists("uploads/blog/" . $related['featured_image'])): ?>
-                                                <img src="uploads/blog/<?php echo $related['featured_image']; ?>" alt="<?php echo htmlspecialchars($related['title']); ?>">
-                                            <?php else: ?>
-                                                <img src="img/placeholder-blog.jpg" alt="Placeholder">
-                                            <?php endif; ?>
-                                        </div>
-                                        <div class="related-post-content">
-                                            <h4><?php echo htmlspecialchars($related['title']); ?></h4>
-                                            <span class="post-date"><?php echo date('d/m/Y', strtotime($related['created_at'])); ?></span>
-                                            <a href="blog-single.php?id=<?php echo $related['id']; ?>&slug=<?php echo $related['slug']; ?>" class="read-more">Leggi di più</a>
-                                        </div>
-                                    </article>
-                                <?php endforeach; ?>
-                            </div>
+                    <div class="related-posts" data-aos="fade-up">
+                        <h3>Articoli Correlati</h3>
+                        <div class="related-posts-grid">
+                            <?php 
+                            $count = 0;
+                            foreach ($recent_posts as $recent): 
+                                // Skip the current post
+                                if ($recent['id'] == $post['id']) continue;
+                                
+                                // Only show 3 related posts
+                                if ($count >= 3) break;
+                                $count++;
+                            ?>
+                            <article class="related-post">
+                                <a href="blog-single.php?slug=<?php echo htmlspecialchars($recent['slug']); ?>">
+                                    <div class="related-post-image">
+                                        <?php if (!empty($recent['featured_image'])): ?>
+                                        <img src="uploads/blog/<?php echo htmlspecialchars($recent['featured_image']); ?>" alt="<?php echo htmlspecialchars($recent['title']); ?>">
+                                        <?php else: ?>
+                                        <img src="images/blog/default-post.jpg" alt="<?php echo htmlspecialchars($recent['title']); ?>">
+                                        <?php endif; ?>
+                                    </div>
+                                    <h4><?php echo htmlspecialchars($recent['title']); ?></h4>
+                                </a>
+                                <span class="date"><?php echo date('d/m/Y', strtotime($recent['created_at'])); ?></span>
+                            </article>
+                            <?php endforeach; ?>
                         </div>
-                    <?php endif; ?>
+                    </div>
                 </div>
-                
-                <aside class="blog-sidebar" data-aos="fade-left">
+
+                <div class="blog-sidebar">
                     <!-- Recent Posts -->
-                    <div class="sidebar-widget">
+                    <div class="sidebar-widget" data-aos="fade-up">
                         <h3>Articoli Recenti</h3>
                         <ul class="recent-posts">
                             <?php foreach ($recent_posts as $recent): ?>
-                                <li>
-                                    <a href="blog-single.php?id=<?php echo $recent['id']; ?>&slug=<?php echo $recent['slug']; ?>">
-                                        <?php echo htmlspecialchars($recent['title']); ?>
-                                    </a>
-                                    <span class="post-date"><?php echo date('d/m/Y', strtotime($recent['created_at'])); ?></span>
-                                </li>
+                            <?php if ($recent['id'] == $post['id']) continue; ?>
+                            <li>
+                                <a href="blog-single.php?slug=<?php echo htmlspecialchars($recent['slug']); ?>">
+                                    <div class="recent-post-image">
+                                        <?php if (!empty($recent['featured_image'])): ?>
+                                        <img src="uploads/blog/<?php echo htmlspecialchars($recent['featured_image']); ?>" alt="<?php echo htmlspecialchars($recent['title']); ?>">
+                                        <?php else: ?>
+                                        <img src="images/blog/default-post.jpg" alt="<?php echo htmlspecialchars($recent['title']); ?>">
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="recent-post-info">
+                                        <h4><?php echo htmlspecialchars($recent['title']); ?></h4>
+                                        <span class="date"><?php echo date('d/m/Y', strtotime($recent['created_at'])); ?></span>
+                                    </div>
+                                </a>
+                            </li>
                             <?php endforeach; ?>
                         </ul>
                     </div>
-                    
+
                     <!-- CTA Widget -->
-                    <div class="sidebar-widget cta-widget">
-                        <h3>Hai bisogno di aiuto?</h3>
-                        <p>Contattaci per una consulenza gratuita sui nostri servizi.</p>
-                        <a href="contact.php" class="btn btn-primary">Contattaci</a>
+                    <div class="sidebar-widget cta-widget" data-aos="fade-up">
+                        <h3>Hai bisogno di assistenza?</h3>
+                        <p>Contattaci per una consulenza gratuita sui nostri servizi</p>
+                        <a href="contatti.html" class="btn btn-primary">Contattaci Ora</a>
                     </div>
-                    
+
                     <!-- Social Widget -->
-                    <div class="sidebar-widget social-widget">
-                        <h3>Seguici</h3>
-                        <div class="social-icons">
-                            <a href="#" target="_blank"><i class="fab fa-facebook-f"></i></a>
-                            <a href="#" target="_blank"><i class="fab fa-twitter"></i></a>
-                            <a href="#" target="_blank"><i class="fab fa-instagram"></i></a>
-                            <a href="#" target="_blank"><i class="fab fa-linkedin-in"></i></a>
+                    <div class="sidebar-widget social-widget" data-aos="fade-up">
+                        <h3>Seguici sui Social</h3>
+                        <div class="social-links">
+                            <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                            <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                            <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                            <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
                         </div>
                     </div>
-                </aside>
+                </div>
             </div>
         </div>
     </section>
-    
+
+    <!-- CTA -->
+    <section class="cta">
+        <div class="container">
+            <div class="cta-content" data-aos="zoom-in">
+                <h2>Hai bisogno di assistenza?</h2>
+                <p>Contattaci per una consulenza gratuita sui nostri servizi</p>
+                <a href="contatti.html" class="btn btn-light">Contattaci Ora</a>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
-    <?php include 'includes/footer.php'; ?>
-    
-    <!-- Scripts -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-col">
+                    <div class="footer-logo">
+                        <img src="images/logo-white.svg" alt="Agenzia Plinio Logo">
+                    </div>
+                    <p>Agenzia Plinio - Soluzioni semplici per la tua vita digitale. Tutti i servizi di cui hai bisogno in un unico posto.</p>
+                    <div class="social-links">
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <h3>Link Rapidi</h3>
+                    <ul class="footer-links">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="chi-siamo.html">Chi Siamo</a></li>
+                        <li><a href="servizi.html">Servizi</a></li>
+                        <li><a href="contatti.html">Contatti</a></li>
+                        <li><a href="blog.php">Blog</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h3>Servizi</h3>
+                    <ul class="footer-links">
+                        <li><a href="servizi-pagamenti.html">Pagamenti</a></li>
+                        <li><a href="servizi-spedizioni.html">Spedizioni</a></li>
+                        <li><a href="servizi-telefonia.html">Telefonia</a></li>
+                        <li><a href="servizi-energia.html">Energia</a></li>
+                        <li><a href="servizi-spid.html">SPID</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h3>Contatti</h3>
+                    <ul class="contact-info">
+                        <li><i class="fas fa-map-marker-alt"></i> Via Plinio 72, Milano</li>
+                        <li><i class="fas fa-phone"></i> +39 02 1234567</li>
+                        <li><i class="fas fa-envelope"></i> info@agenziaplinio.it</li>
+                        <li><i class="fas fa-clock"></i> Lun-Ven: 9:00-18:00, Sab: 9:00-12:30</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 Agenzia Plinio. Tutti i diritti riservati.</p>
+                <div class="footer-legal">
+                    <a href="privacy-policy.html">Privacy Policy</a>
+                    <a href="termini-condizioni.html">Termini e Condizioni</a>
+                    <a href="cookie-policy.html">Cookie Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
     <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
     <script src="js/main.js"></script>
 </body>
