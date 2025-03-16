@@ -88,7 +88,28 @@ executeQuery($conn, $create_users_table, "Creazione tabella users");
 executeQuery($conn, $create_admins_table, "Creazione tabella admins");
 executeQuery($conn, $create_contacts_table, "Creazione tabella contacts");
 executeQuery($conn, $create_services_table, "Creazione tabella services");
-executeQuery($conn, $create_blog_posts_table, "Creazione tabella blog_posts");
+// Creazione della tabella blog_posts se non esiste
+$sql = "CREATE TABLE IF NOT EXISTS blog_posts (
+    id INT(11) NOT NULL AUTO_INCREMENT,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    content TEXT NOT NULL,
+    excerpt TEXT,
+    featured_image VARCHAR(255),
+    status ENUM('published', 'draft') NOT NULL DEFAULT 'draft',
+    author_id INT(11) NOT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+
+if ($conn->query($sql) === TRUE) {
+    echo "Tabella blog_posts creata con successo o già esistente<br>";
+} else {
+    echo "Errore nella creazione della tabella blog_posts: " . $conn->error . "<br>";
+}
+//executeQuery($conn, $create_blog_posts_table, "Creazione tabella blog_posts");
 
 // 2. Inserimento dati di default
 // Admin predefinito (password: password)

@@ -16,125 +16,179 @@ if (!isset($_SESSION['admin_id'])) {
 // Get admin username
 $admin_username = $_SESSION['admin_username'];
 
-// Get statistics
-// Count users
-$users_count = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM users");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $users_count = $row['count'];
-}
-
-// Count users from last month
-$users_last_month = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM users WHERE created_at <= DATE_SUB(NOW(), INTERVAL 1 MONTH)");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $users_last_month = $row['count'];
-}
-
-// Calculate user growth percentage
-$users_growth = 0;
-if ($users_last_month > 0) {
-    $users_growth = round((($users_count - $users_last_month) / $users_last_month) * 100);
-}
-
-// Count services
-$services_count = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM services");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $services_count = $row['count'];
-}
-
-// Count services from last month
-$services_last_month = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM services WHERE created_at <= DATE_SUB(NOW(), INTERVAL 1 MONTH)");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $services_last_month = $row['count'];
-}
-
-// Calculate services growth percentage
-$services_growth = 0;
-if ($services_last_month > 0) {
-    $services_growth = round((($services_count - $services_last_month) / $services_last_month) * 100);
-} else {
-    $services_growth = 5; // Default value if no services last month
-}
-
-// Count contact messages
-$messages_count = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM contacts");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $messages_count = $row['count'];
-}
-
-// Count messages from last month
-$messages_last_month = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM contacts WHERE created_at <= DATE_SUB(NOW(), INTERVAL 1 MONTH)");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $messages_last_month = $row['count'];
-}
-
-// Calculate messages growth percentage
-$messages_growth = 0;
-if ($messages_last_month > 0) {
-    $messages_growth = round((($messages_count - $messages_last_month) / $messages_last_month) * 100);
-} else {
-    $messages_growth = 8; // Default value if no messages last month
-}
-
-// Count blog posts
-$posts_count = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM blog_posts");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $posts_count = $row['count'];
-}
-
-// Count posts from last month
-$posts_last_month = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM blog_posts WHERE created_at <= DATE_SUB(NOW(), INTERVAL 1 MONTH)");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $posts_last_month = $row['count'];
-}
-
-// Calculate posts growth percentage
-$posts_growth = 0;
-if ($posts_last_month > 0) {
-    $posts_growth = round((($posts_count - $posts_last_month) / $posts_last_month) * 100);
-} else {
-    $posts_growth = -3; // Default value if no posts last month
-}
-
-// Get recent contact messages
-$recent_messages = [];
-$result = $conn->query("SELECT * FROM contacts ORDER BY created_at DESC LIMIT 5");
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $recent_messages[] = $row;
-    }
-}
-
-// Get recent users
-$recent_users = [];
-$result = $conn->query("SELECT * FROM users ORDER BY created_at DESC LIMIT 5");
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $recent_users[] = $row;
-    }
-}
-
-// Get unread messages count
+// Get unread messages count for notifications
 $unread_messages_count = 0;
 $result = $conn->query("SELECT COUNT(*) as count FROM contacts WHERE is_read = 0");
 if ($result && $result->num_rows > 0) {
     $row = $result->fetch_assoc();
     $unread_messages_count = $row['count'];
+}
+
+// Handle search
+$search = '';
+if (isset($_GET['search']) && !empty($_GET['search'])) {
+    $search = sanitize_input($_GET['search']);
+}
+
+// Handle status filter
+$status_filter = '';
+if (isset($_GET['status']) && in_array($_GET['status'], ['active', 'inactive'])) {
+    $status_filter = $_GET['status'];
+}
+
+// Pagination
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$per_page = 10;
+$offset = ($page - 1) * $per_page;
+
+// Get total services count for pagination
+$total_services = 0;
+$where_clauses = [];
+$params = [];
+$param_types = '';
+
+if (!empty($search)) {
+    $where_clauses[] = "(name LIKE ? OR description LIKE ?)";
+    $search_param = "%{$search}%";
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $param_types .= 'ss';
+}
+
+if ($status_filter === 'active') {
+    $where_clauses[] = "is_active = 1";
+} elseif ($status_filter === 'inactive') {
+    $where_clauses[] = "is_active = 0";
+}
+
+$where_sql = !empty($where_clauses) ? "WHERE " . implode(' AND ', $where_clauses) : "";
+
+$count_sql = "SELECT COUNT(*) as count FROM services $where_sql";
+
+if (!empty($params)) {
+    $stmt = $conn->prepare($count_sql);
+    $stmt->bind_param($param_types, ...$params);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $total_services = $row['count'];
+    }
+    $stmt->close();
+} else {
+    $result = $conn->query($count_sql);
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $total_services = $row['count'];
+    }
+}
+
+$total_pages = ceil($total_services / $per_page);
+
+// Get services with pagination and search
+$services = [];
+$sql = "SELECT * FROM services $where_sql ORDER BY name ASC LIMIT ? OFFSET ?";
+
+if (!empty($params)) {
+    $stmt = $conn->prepare($sql);
+    $param_types .= 'ii';
+    $params[] = $per_page;
+    $params[] = $offset;
+    $stmt->bind_param($param_types, ...$params);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $services[] = $row;
+        }
+    }
+    $stmt->close();
+} else {
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $per_page, $offset);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $services[] = $row;
+        }
+    }
+    $stmt->close();
+}
+
+// Handle service activation/deactivation
+$status_message = '';
+if (isset($_GET['toggle']) && !empty($_GET['toggle'])) {
+    $service_id = (int)$_GET['toggle'];
+    
+    // Check if service exists
+    $stmt = $conn->prepare("SELECT id, name, is_active FROM services WHERE id = ?");
+    $stmt->bind_param("i", $service_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result && $result->num_rows > 0) {
+        $service = $result->fetch_assoc();
+        $new_status = $service['is_active'] ? 0 : 1;
+        
+        // Update service status
+        $stmt = $conn->prepare("UPDATE services SET is_active = ? WHERE id = ?");
+        $stmt->bind_param("ii", $new_status, $service_id);
+        
+        if ($stmt->execute()) {
+            $status_text = $new_status ? "attivato" : "disattivato";
+            $status_message = "Servizio '{$service['name']}' $status_text con successo.";
+            // Redirect to remove the toggle parameter from URL
+            header("Location: services.php?status_updated=true&message=" . urlencode($status_message));
+            exit;
+        } else {
+            $status_message = "Errore durante l'aggiornamento dello stato del servizio.";
+        }
+    } else {
+        $status_message = "Servizio non trovato.";
+    }
+    $stmt->close();
+}
+
+// Handle service deletion if requested
+$delete_message = '';
+if (isset($_GET['delete']) && !empty($_GET['delete'])) {
+    $service_id = (int)$_GET['delete'];
+    
+    // Check if service exists
+    $stmt = $conn->prepare("SELECT id, name FROM services WHERE id = ?");
+    $stmt->bind_param("i", $service_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result && $result->num_rows > 0) {
+        $service = $result->fetch_assoc();
+        
+        // Delete service
+        $stmt = $conn->prepare("DELETE FROM services WHERE id = ?");
+        $stmt->bind_param("i", $service_id);
+        
+        if ($stmt->execute()) {
+            $delete_message = "Servizio '{$service['name']}' eliminato con successo.";
+            // Redirect to remove the delete parameter from URL
+            header("Location: services.php?deleted=true&message=" . urlencode($delete_message));
+            exit;
+        } else {
+            $delete_message = "Errore durante l'eliminazione del servizio.";
+        }
+    } else {
+        $delete_message = "Servizio non trovato.";
+    }
+    $stmt->close();
+}
+
+// Check for status update or deletion success message
+if (isset($_GET['status_updated']) && $_GET['status_updated'] === 'true' && isset($_GET['message'])) {
+    $status_message = urldecode($_GET['message']);
+}
+
+if (isset($_GET['deleted']) && $_GET['deleted'] === 'true' && isset($_GET['message'])) {
+    $delete_message = urldecode($_GET['message']);
 }
 ?>
 
@@ -143,7 +197,7 @@ if ($result && $result->num_rows > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Admin Panel</title>
+    <title>Gestione Servizi - Admin Panel</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -526,126 +580,7 @@ if ($result && $result->num_rows > 0) {
             color: var(--secondary-color);
         }
 
-        /* Dashboard Cards */
-        .dashboard-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .dashboard-card {
-            background-color: var(--white-color);
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            padding: 1.5rem;
-            display: flex;
-            align-items: center;
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .dashboard-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        .dashboard-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 5px;
-            height: 100%;
-            background-color: var(--primary-color);
-        }
-
-        .dashboard-card.users::before {
-            background-color: var(--primary-color);
-        }
-
-        .dashboard-card.services::before {
-            background-color: var(--success-color);
-        }
-
-        .dashboard-card.messages::before {
-            background-color: var(--warning-color);
-        }
-
-        .dashboard-card.posts::before {
-            background-color: var(--info-color);
-        }
-
-        .dashboard-card-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-
-        .dashboard-card-icon.users {
-            background-color: rgba(37, 99, 235, 0.1);
-            color: var(--primary-color);
-        }
-
-        .dashboard-card-icon.services {
-            background-color: rgba(16, 185, 129, 0.1);
-            color: var(--success-color);
-        }
-
-        .dashboard-card-icon.messages {
-            background-color: rgba(245, 158, 11, 0.1);
-            color: var(--warning-color);
-        }
-
-        .dashboard-card-icon.posts {
-            background-color: rgba(6, 182, 212, 0.1);
-            color: var(--info-color);
-        }
-
-        .dashboard-card-content {
-            flex: 1;
-        }
-
-        .dashboard-card-content h3 {
-            font-size: 1rem;
-            margin-bottom: 0.25rem;
-            color: var(--secondary-color);
-        }
-
-        .dashboard-card-content p {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin: 0;
-            color: var(--dark-color);
-        }
-
-        .dashboard-card-trend {
-            display: flex;
-            align-items: center;
-            margin-top: 0.5rem;
-            font-size: 0.85rem;
-        }
-
-        .dashboard-card-trend.up {
-            color: var(--success-color);
-        }
-
-        .dashboard-card-trend.down {
-            color: var(--danger-color);
-        }
-
-        .dashboard-card-trend i {
-            margin-right: 0.25rem;
-        }
-
-        /* Content Boxes */
+        /* Content Box */
         .content-box {
             background-color: var(--white-color);
             border-radius: var(--border-radius);
@@ -675,6 +610,62 @@ if ($result && $result->num_rows > 0) {
 
         .content-box-body {
             padding: 1.5rem;
+        }
+
+        /* Search and Filter */
+        .search-filter {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .search-box {
+            flex: 1;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--secondary-color);
+        }
+
+        .search-box button {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            padding: 0.25rem;
+        }
+
+        .filter-options {
+            display: flex;
+            gap: 0.5rem;
         }
 
         /* Tables */
@@ -747,14 +738,58 @@ if ($result && $result->num_rows > 0) {
             font-weight: 500;
         }
 
-        .table .status.read {
+        .table .status.active {
             background-color: rgba(16, 185, 129, 0.1);
             color: var(--success-color);
         }
 
-        .table .status.unread {
-            background-color: rgba(245, 158, 11, 0.1);
-            color: var(--warning-color);
+        .table .status.inactive {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+        }
+
+        .table .service-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            font-size: 1.25rem;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .pagination-item {
+            margin: 0 0.25rem;
+        }
+
+        .pagination-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--white-color);
+            color: var(--dark-color);
+            transition: var(--transition);
+            box-shadow: var(--box-shadow);
+        }
+
+        .pagination-link:hover,
+        .pagination-link.active {
+            background-color: var(--primary-color);
+            color: var(--white-color);
         }
 
         /* Buttons */
@@ -817,6 +852,66 @@ if ($result && $result->num_rows > 0) {
             font-size: 0.875rem;
         }
 
+        /* Alerts */
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .alert i {
+            margin-right: 0.75rem;
+            font-size: 1.25rem;
+        }
+
+        .alert-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        .alert-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .alert-warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--warning-color);
+            color: var(--warning-color);
+        }
+
+        .alert-info {
+            background-color: rgba(6, 182, 212, 0.1);
+            border-left: 4px solid var(--info-color);
+            color: var(--info-color);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1.5rem;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            color: var(--secondary-color);
+            margin-bottom: 1.5rem;
+        }
+
         /* Responsive Styles */
         @media (max-width: 992px) {
             .sidebar {
@@ -841,16 +936,21 @@ if ($result && $result->num_rows > 0) {
         }
 
         @media (max-width: 768px) {
-            .dashboard-cards {
-                grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
-            }
-            
             .main-container {
                 padding: 1rem;
             }
             
             .header-search {
                 display: none;
+            }
+            
+            .search-filter {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-box {
+                max-width: 100%;
             }
         }
 
@@ -901,6 +1001,24 @@ if ($result && $result->num_rows > 0) {
         .overlay.active {
             display: block;
         }
+
+        .filters-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .filters-container .search-box {
+            flex-grow: 1;
+            max-width: 400px;
+        }
+
+        .filters-container .filter-options {
+            display: flex;
+            gap: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -919,7 +1037,7 @@ if ($result && $result->num_rows > 0) {
                 <div class="sidebar-menu-category">Dashboard</div>
                 <ul>
                     <li class="sidebar-menu-item">
-                        <a href="dashboard.php" class="sidebar-menu-link active">
+                        <a href="dashboard.php" class="sidebar-menu-link">
                             <i class="fas fa-tachometer-alt"></i>
                             <span>Dashboard</span>
                         </a>
@@ -935,7 +1053,7 @@ if ($result && $result->num_rows > 0) {
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
-                        <a href="services.php" class="sidebar-menu-link">
+                        <a href="services.php" class="sidebar-menu-link active">
                             <i class="fas fa-cogs"></i>
                             <span>Servizi</span>
                         </a>
@@ -1033,172 +1151,137 @@ if ($result && $result->num_rows > 0) {
 
             <div class="main-container">
                 <div class="page-title">
-                    <h1>Dashboard</h1>
+                    <h1>Gestione Servizi</h1>
                     <div class="breadcrumb">
                         <div class="breadcrumb-item">
                             <a href="dashboard.php">Home</a>
                         </div>
                         <div class="breadcrumb-item active">
-                            Dashboard
+                            Servizi
                         </div>
                     </div>
                 </div>
 
-                <!-- Dashboard Cards -->
-                <div class="dashboard-cards">
-                    <div class="dashboard-card users">
-                        <div class="dashboard-card-icon users">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="dashboard-card-content">
-                            <h3>Utenti</h3>
-                            <p><?php echo $users_count; ?></p>
-                            <div class="dashboard-card-trend <?php echo $users_growth >= 0 ? 'up' : 'down'; ?>">
-                                <i class="fas fa-arrow-<?php echo $users_growth >= 0 ? 'up' : 'down'; ?>"></i>
-                                <span><?php echo abs($users_growth); ?>% rispetto al mese scorso</span>
-                            </div>
-                        </div>
+                <?php if (!empty($status_message)): ?>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        <span><?php echo $status_message; ?></span>
                     </div>
-                    <div class="dashboard-card services">
-                        <div class="dashboard-card-icon services">
-                            <i class="fas fa-cogs"></i>
-                        </div>
-                        <div class="dashboard-card-content">
-                            <h3>Servizi</h3>
-                            <p><?php echo $services_count; ?></p>
-                            <div class="dashboard-card-trend <?php echo $services_growth >= 0 ? 'up' : 'down'; ?>">
-                                <i class="fas fa-arrow-<?php echo $services_growth >= 0 ? 'up' : 'down'; ?>"></i>
-                                <span><?php echo abs($services_growth); ?>% rispetto al mese scorso</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="dashboard-card messages">
-                        <div class="dashboard-card-icon messages">
-                            <i class="fas fa-envelope"></i>
-                        </div>
-                        <div class="dashboard-card-content">
-                            <h3>Messaggi</h3>
-                            <p><?php echo $messages_count; ?></p>
-                            <div class="dashboard-card-trend <?php echo $messages_growth >= 0 ? 'up' : 'down'; ?>">
-                                <i class="fas fa-arrow-<?php echo $messages_growth >= 0 ? 'up' : 'down'; ?>"></i>
-                                <span><?php echo abs($messages_growth); ?>% rispetto al mese scorso</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="dashboard-card posts">
-                        <div class="dashboard-card-icon posts">
-                            <i class="fas fa-blog"></i>
-                        </div>
-                        <div class="dashboard-card-content">
-                            <h3>Articoli</h3>
-                            <p><?php echo $posts_count; ?></p>
-                            <div class="dashboard-card-trend <?php echo $posts_growth >= 0 ? 'up' : 'down'; ?>">
-                                <i class="fas fa-arrow-<?php echo $posts_growth >= 0 ? 'up' : 'down'; ?>"></i>
-                                <span><?php echo abs($posts_growth); ?>% rispetto al mese scorso</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <?php endif; ?>
 
-                <!-- Recent Messages -->
+                <?php if (!empty($delete_message)): ?>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        <span><?php echo $delete_message; ?></span>
+                    </div>
+                <?php endif; ?>
+
                 <div class="content-box">
                     <div class="content-box-header">
-                        <h2>Messaggi Recenti</h2>
+                        <h2>Elenco Servizi</h2>
                         <div class="actions">
-                            <a href="contacts.php" class="btn btn-primary btn-sm">
-                                <i class="fas fa-eye"></i> Vedi Tutti
+                            <a href="add-service.php" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus"></i> Aggiungi Servizio
                             </a>
                         </div>
                     </div>
                     <div class="content-box-body">
+                        <div class="filters-container">
+                            <form action="services.php" method="get" class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" name="search" placeholder="Cerca per nome o descrizione..." value="<?php echo htmlspecialchars($search); ?>">
+                                <button type="submit" title="Cerca">
+                                    <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </form>
+                            <div class="filter-options">
+                                <a href="services.php<?php echo !empty($search) ? '?search=' . urlencode($search) : ''; ?>" class="btn btn-secondary btn-sm <?php echo empty($status_filter) ? 'active' : ''; ?>">
+                                    Tutti
+                                </a>
+                                <a href="services.php?status=active<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="btn btn-success btn-sm <?php echo $status_filter === 'active' ? 'active' : ''; ?>">
+                                    Attivi
+                                </a>
+                                <a href="services.php?status=inactive<?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?>" class="btn btn-danger btn-sm <?php echo $status_filter === 'inactive' ? 'active' : ''; ?>">
+                                    Inattivi
+                                </a>
+                                <?php if (!empty($search) || !empty($status_filter)): ?>
+                                    <a href="services.php" class="btn btn-secondary btn-sm">
+                                        <i class="fas fa-times"></i> Cancella Filtri
+                                    </a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
                         <div class="table-responsive">
                             <table class="table">
                                 <thead>
                                     <tr>
-                                        <th>Nome</th>
-                                        <th>Email</th>
-                                        <th>Servizio</th>
-                                        <th>Data</th>
-                                        <th>Stato</th>
-                                        <th>Azioni</th>
+                                        <th style="width: 5%;">#</th>
+                                        <th style="width: 15%;">Icona</th>
+                                        <th style="width: 25%;">Nome</th>
+                                        <th style="width: 25%;">Slug</th>
+                                        <th style="width: 15%;">Stato</th>
+                                        <th style="width: 15%;">Azioni</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php if (empty($recent_messages)): ?>
+                                    <?php if (empty($services)): ?>
                                         <tr>
-                                            <td colspan="6" class="text-center">Nessun messaggio trovato</td>
+                                            <td colspan="8">
+                                                <div class="empty-state">
+                                                    <div class="empty-state-icon">
+                                                        <i class="fas fa-cogs"></i>
+                                                    </div>
+                                                    <h3>Nessun servizio trovato</h3>
+                                                    <?php if (!empty($search) || !empty($status_filter)): ?>
+                                                        <p>Nessun risultato per i filtri applicati. Prova con altri criteri di ricerca.</p>
+                                                        <a href="services.php" class="btn btn-primary">
+                                                            <i class="fas fa-arrow-left"></i> Torna a tutti i servizi
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <p>Non ci sono ancora servizi registrati.</p>
+                                                        <a href="add-service.php" class="btn btn-primary">
+                                                            <i class="fas fa-plus"></i> Aggiungi il primo servizio
+                                                        </a>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </td>
                                         </tr>
                                     <?php else: ?>
-                                        <?php foreach ($recent_messages as $message): ?>
+                                        <?php foreach ($services as $service): ?>
                                             <tr>
-                                                <td><?php echo htmlspecialchars($message['name']); ?></td>
-                                                <td><?php echo htmlspecialchars($message['email']); ?></td>
-                                                <td><?php echo htmlspecialchars($message['service'] ?: 'N/A'); ?></td>
-                                                <td><?php echo date('d/m/Y H:i', strtotime($message['created_at'])); ?></td>
+                                                <td><?php echo $service['id']; ?></td>
                                                 <td>
-                                                    <?php if ($message['is_read'] == 0): ?>
-                                                        <span class="status unread">Non letto</span>
+                                                    <div class="service-icon">
+                                                        <i class="fas <?php echo htmlspecialchars($service['icon']); ?>"></i>
+                                                    </div>
+                                                </td>
+                                                <td><?php echo htmlspecialchars($service['name']); ?></td>
+                                                <td><?php echo htmlspecialchars($service['slug']); ?></td>
+                                                <td>
+                                                    <?php if ($service['is_active']): ?>
+                                                        <span class="status active">Attivo</span>
                                                     <?php else: ?>
-                                                        <span class="status read">Letto</span>
+                                                        <span class="status inactive">Inattivo</span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td class="actions">
-                                                    <a href="view-message.php?id=<?php echo $message['id']; ?>" class="btn btn-primary btn-icon" title="Visualizza">
+                                                    <a href="view-service.php?id=<?php echo $service['id']; ?>" class="btn btn-primary btn-icon" title="Visualizza">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
-                                                    <a href="delete-message.php?id=<?php echo $message['id']; ?>" class="btn btn-danger btn-icon" title="Elimina" onclick="return confirm('Sei sicuro di voler eliminare questo messaggio?');">
-                                                        <i class="fas fa-trash"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Users -->
-                <div class="content-box">
-                    <div class="content-box-header">
-                        <h2>Utenti Recenti</h2>
-                        <div class="actions">
-                            <a href="users.php" class="btn btn-primary btn-sm">
-                                <i class="fas fa-eye"></i> Vedi Tutti
-                            </a>
-                        </div>
-                    </div>
-                    <div class="content-box-body">
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Nome</th>
-                                        <th>Email</th>
-                                        <th>Data Registrazione</th>
-                                        <th>Azioni</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($recent_users)): ?>
-                                        <tr>
-                                            <td colspan="4" class="text-center">Nessun utente trovato</td>
-                                        </tr>
-                                    <?php else: ?>
-                                        <?php foreach ($recent_users as $user): ?>
-                                            <tr>
-                                                <td><?php echo htmlspecialchars($user['name']); ?></td>
-                                                <td><?php echo htmlspecialchars($user['email']); ?></td>
-                                                <td><?php echo date('d/m/Y', strtotime($user['created_at'])); ?></td>
-                                                <td class="actions">
-                                                    <a href="view-user.php?id=<?php echo $user['id']; ?>" class="btn btn-primary btn-icon" title="Visualizza">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <a href="edit-user.php?id=<?php echo $user['id']; ?>" class="btn btn-secondary btn-icon" title="Modifica">
+                                                    <a href="edit-service.php?id=<?php echo $service['id']; ?>" class="btn btn-secondary btn-icon" title="Modifica">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
-                                                    <a href="delete-user.php?id=<?php echo $user['id']; ?>" class="btn btn-danger btn-icon" title="Elimina" onclick="return confirm('Sei sicuro di voler eliminare questo utente?');">
+                                                    <?php if ($service['is_active']): ?>
+                                                        <a href="services.php?toggle=<?php echo $service['id']; ?>" class="btn btn-warning btn-icon" title="Disattiva" onclick="return confirm('Sei sicuro di voler disattivare questo servizio?');">
+                                                            <i class="fas fa-toggle-off"></i>
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <a href="services.php?toggle=<?php echo $service['id']; ?>" class="btn btn-success btn-icon" title="Attiva" onclick="return confirm('Sei sicuro di voler attivare questo servizio?');">
+                                                            <i class="fas fa-toggle-on"></i>
+                                                        </a>
+                                                    <?php endif; ?>
+                                                    <a href="services.php?delete=<?php echo $service['id']; ?>" class="btn btn-danger btn-icon" title="Elimina" onclick="return confirm('Sei sicuro di voler eliminare questo servizio?');">
                                                         <i class="fas fa-trash"></i>
                                                     </a>
                                                 </td>
@@ -1208,6 +1291,55 @@ if ($result && $result->num_rows > 0) {
                                 </tbody>
                             </table>
                         </div>
+
+                        <?php if ($total_pages > 1): ?>
+                            <div class="pagination">
+                                <?php if ($page > 1): ?>
+                                    <div class="pagination-item">
+                                        <a href="services.php?page=<?php echo $page - 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?><?php echo !empty($status_filter) ? '&status=' . $status_filter : ''; ?>" class="pagination-link">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php
+                                $start_page = max(1, $page - 2);
+                                $end_page = min($total_pages, $page + 2);
+
+                                if ($start_page > 1) {
+                                    echo '<div class="pagination-item">';
+                                    echo '<a href="services.php?page=1' . (!empty($search) ? '&search=' . urlencode($search) : '') . (!empty($status_filter) ? '&status=' . $status_filter : '') . '" class="pagination-link">1</a>';
+                                    echo '</div>';
+                                    if ($start_page > 2) {
+                                        echo '<div class="pagination-item">...</div>';
+                                    }
+                                }
+
+                                for ($i = $start_page; $i <= $end_page; $i++) {
+                                    echo '<div class="pagination-item">';
+                                    echo '<a href="services.php?page=' . $i . (!empty($search) ? '&search=' . urlencode($search) : '') . (!empty($status_filter) ? '&status=' . $status_filter : '') . '" class="pagination-link' . ($i == $page ? ' active' : '') . '">' . $i . '</a>';
+                                    echo '</div>';
+                                }
+
+                                if ($end_page < $total_pages) {
+                                    if ($end_page < $total_pages - 1) {
+                                        echo '<div class="pagination-item">...</div>';
+                                    }
+                                    echo '<div class="pagination-item">';
+                                    echo '<a href="services.php?page=' . $total_pages . (!empty($search) ? '&search=' . urlencode($search) : '') . (!empty($status_filter) ? '&status=' . $status_filter : '') . '" class="pagination-link">' . $total_pages . '</a>';
+                                    echo '</div>';
+                                }
+                                ?>
+
+                                <?php if ($page < $total_pages): ?>
+                                    <div class="pagination-item">
+                                        <a href="services.php?page=<?php echo $page + 1; ?><?php echo !empty($search) ? '&search=' . urlencode($search) : ''; ?><?php echo !empty($status_filter) ? '&status=' . $status_filter : ''; ?>" class="pagination-link">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

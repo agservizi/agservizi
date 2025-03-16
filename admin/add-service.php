@@ -16,125 +16,109 @@ if (!isset($_SESSION['admin_id'])) {
 // Get admin username
 $admin_username = $_SESSION['admin_username'];
 
-// Get statistics
-// Count users
-$users_count = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM users");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $users_count = $row['count'];
-}
-
-// Count users from last month
-$users_last_month = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM users WHERE created_at <= DATE_SUB(NOW(), INTERVAL 1 MONTH)");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $users_last_month = $row['count'];
-}
-
-// Calculate user growth percentage
-$users_growth = 0;
-if ($users_last_month > 0) {
-    $users_growth = round((($users_count - $users_last_month) / $users_last_month) * 100);
-}
-
-// Count services
-$services_count = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM services");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $services_count = $row['count'];
-}
-
-// Count services from last month
-$services_last_month = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM services WHERE created_at <= DATE_SUB(NOW(), INTERVAL 1 MONTH)");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $services_last_month = $row['count'];
-}
-
-// Calculate services growth percentage
-$services_growth = 0;
-if ($services_last_month > 0) {
-    $services_growth = round((($services_count - $services_last_month) / $services_last_month) * 100);
-} else {
-    $services_growth = 5; // Default value if no services last month
-}
-
-// Count contact messages
-$messages_count = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM contacts");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $messages_count = $row['count'];
-}
-
-// Count messages from last month
-$messages_last_month = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM contacts WHERE created_at <= DATE_SUB(NOW(), INTERVAL 1 MONTH)");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $messages_last_month = $row['count'];
-}
-
-// Calculate messages growth percentage
-$messages_growth = 0;
-if ($messages_last_month > 0) {
-    $messages_growth = round((($messages_count - $messages_last_month) / $messages_last_month) * 100);
-} else {
-    $messages_growth = 8; // Default value if no messages last month
-}
-
-// Count blog posts
-$posts_count = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM blog_posts");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $posts_count = $row['count'];
-}
-
-// Count posts from last month
-$posts_last_month = 0;
-$result = $conn->query("SELECT COUNT(*) as count FROM blog_posts WHERE created_at <= DATE_SUB(NOW(), INTERVAL 1 MONTH)");
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $posts_last_month = $row['count'];
-}
-
-// Calculate posts growth percentage
-$posts_growth = 0;
-if ($posts_last_month > 0) {
-    $posts_growth = round((($posts_count - $posts_last_month) / $posts_last_month) * 100);
-} else {
-    $posts_growth = -3; // Default value if no posts last month
-}
-
-// Get recent contact messages
-$recent_messages = [];
-$result = $conn->query("SELECT * FROM contacts ORDER BY created_at DESC LIMIT 5");
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $recent_messages[] = $row;
-    }
-}
-
-// Get recent users
-$recent_users = [];
-$result = $conn->query("SELECT * FROM users ORDER BY created_at DESC LIMIT 5");
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $recent_users[] = $row;
-    }
-}
-
-// Get unread messages count
+// Get unread messages count for notifications
 $unread_messages_count = 0;
 $result = $conn->query("SELECT COUNT(*) as count FROM contacts WHERE is_read = 0");
 if ($result && $result->num_rows > 0) {
     $row = $result->fetch_assoc();
     $unread_messages_count = $row['count'];
+}
+
+// Initialize variables
+$name = '';
+$slug = '';
+$description = '';
+$icon = '';
+$is_active = 1;
+$success_message = '';
+$error_message = '';
+$errors = [];
+
+// Get available Font Awesome icons for services
+$available_icons = [
+    'fa-money-bill-wave' => 'Pagamenti',
+    'fa-shipping-fast' => 'Spedizioni',
+    'fa-mobile-alt' => 'Telefonia',
+    'fa-bolt' => 'Energia',
+    'fa-id-card' => 'SPID',
+    'fa-envelope' => 'PEC',
+    'fa-signature' => 'Firma Digitale',
+    'fa-search' => 'Visure',
+    'fa-file-alt' => 'Documenti',
+    'fa-credit-card' => 'Carte di Credito',
+    'fa-home' => 'Casa',
+    'fa-car' => 'Auto',
+    'fa-plane' => 'Viaggi',
+    'fa-graduation-cap' => 'Formazione',
+    'fa-briefcase' => 'Lavoro',
+    'fa-heartbeat' => 'Salute',
+    'fa-shield-alt' => 'Assicurazioni',
+    'fa-wifi' => 'Internet',
+    'fa-tv' => 'TV',
+    'fa-chart-line' => 'Investimenti'
+];
+
+// Process form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Get form data
+    $name = sanitize_input($_POST['name'] ?? '');
+    $slug = sanitize_input($_POST['slug'] ?? '');
+    $description = sanitize_input($_POST['description'] ?? '');
+    $icon = sanitize_input($_POST['icon'] ?? '');
+    $is_active = isset($_POST['is_active']) ? 1 : 0;
+    
+    // Validate form data
+    if (empty($name)) {
+        $errors['name'] = "Il nome è obbligatorio.";
+    }
+    
+    if (empty($slug)) {
+        // Generate slug from name if not provided
+        $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $name));
+    } else {
+        // Validate slug format
+        if (!preg_match('/^[a-z0-9-]+$/', $slug)) {
+            $errors['slug'] = "Lo slug può contenere solo lettere minuscole, numeri e trattini.";
+        }
+    }
+    
+    // Check if slug already exists
+    $stmt = $conn->prepare("SELECT id FROM services WHERE slug = ?");
+    $stmt->bind_param("s", $slug);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $errors['slug'] = "Questo slug è già in uso. Scegli un altro slug.";
+    }
+    $stmt->close();
+    
+    if (empty($description)) {
+        $errors['description'] = "La descrizione è obbligatoria.";
+    }
+    
+    if (empty($icon)) {
+        $errors['icon'] = "L'icona è obbligatoria.";
+    }
+    
+    // If no errors, insert service into database
+    if (empty($errors)) {
+        $stmt = $conn->prepare("INSERT INTO services (name, slug, description, icon, is_active, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+        $stmt->bind_param("ssssi", $name, $slug, $description, $icon, $is_active);
+        
+        if ($stmt->execute()) {
+            $success_message = "Servizio aggiunto con successo!";
+            // Clear form data
+            $name = $slug = $description = $icon = '';
+            $is_active = 1;
+        } else {
+            $error_message = "Si è verificato un errore durante l'aggiunta del servizio. Riprova più tardi.";
+        }
+        
+        $stmt->close();
+    } else {
+        $error_message = "Si prega di correggere gli errori nel modulo.";
+    }
 }
 ?>
 
@@ -143,7 +127,7 @@ if ($result && $result->num_rows > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Admin Panel</title>
+    <title>Aggiungi Servizio - Admin Panel</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -526,126 +510,7 @@ if ($result && $result->num_rows > 0) {
             color: var(--secondary-color);
         }
 
-        /* Dashboard Cards */
-        .dashboard-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .dashboard-card {
-            background-color: var(--white-color);
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            padding: 1.5rem;
-            display: flex;
-            align-items: center;
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .dashboard-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        .dashboard-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 5px;
-            height: 100%;
-            background-color: var(--primary-color);
-        }
-
-        .dashboard-card.users::before {
-            background-color: var(--primary-color);
-        }
-
-        .dashboard-card.services::before {
-            background-color: var(--success-color);
-        }
-
-        .dashboard-card.messages::before {
-            background-color: var(--warning-color);
-        }
-
-        .dashboard-card.posts::before {
-            background-color: var(--info-color);
-        }
-
-        .dashboard-card-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-
-        .dashboard-card-icon.users {
-            background-color: rgba(37, 99, 235, 0.1);
-            color: var(--primary-color);
-        }
-
-        .dashboard-card-icon.services {
-            background-color: rgba(16, 185, 129, 0.1);
-            color: var(--success-color);
-        }
-
-        .dashboard-card-icon.messages {
-            background-color: rgba(245, 158, 11, 0.1);
-            color: var(--warning-color);
-        }
-
-        .dashboard-card-icon.posts {
-            background-color: rgba(6, 182, 212, 0.1);
-            color: var(--info-color);
-        }
-
-        .dashboard-card-content {
-            flex: 1;
-        }
-
-        .dashboard-card-content h3 {
-            font-size: 1rem;
-            margin-bottom: 0.25rem;
-            color: var(--secondary-color);
-        }
-
-        .dashboard-card-content p {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin: 0;
-            color: var(--dark-color);
-        }
-
-        .dashboard-card-trend {
-            display: flex;
-            align-items: center;
-            margin-top: 0.5rem;
-            font-size: 0.85rem;
-        }
-
-        .dashboard-card-trend.up {
-            color: var(--success-color);
-        }
-
-        .dashboard-card-trend.down {
-            color: var(--danger-color);
-        }
-
-        .dashboard-card-trend i {
-            margin-right: 0.25rem;
-        }
-
-        /* Content Boxes */
+        /* Content Box */
         .content-box {
             background-color: var(--white-color);
             border-radius: var(--border-radius);
@@ -677,84 +542,129 @@ if ($result && $result->num_rows > 0) {
             padding: 1.5rem;
         }
 
-        /* Tables */
-        .table-responsive {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+        /* Forms */
+        .form-group {
+            margin-bottom: 1.5rem;
         }
 
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .table th,
-        .table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-            white-space: nowrap;
-        }
-
-        .table th {
-            font-weight: 600;
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
             color: var(--dark-color);
-            background-color: var(--light-color);
-            position: sticky;
-            top: 0;
         }
 
-        .table tr:hover {
-            background-color: rgba(0, 0, 0, 0.02);
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+            background-color: var(--white-color);
         }
 
-        .table td:first-child,
-        .table th:first-child {
-            padding-left: 1.5rem;
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
-        .table td:last-child,
-        .table th:last-child {
-            padding-right: 1.5rem;
+        .form-control.is-invalid {
+            border-color: var(--danger-color);
         }
 
-        .table .actions {
+        .invalid-feedback {
+            display: block;
+            margin-top: 0.25rem;
+            font-size: 0.875rem;
+            color: var(--danger-color);
+        }
+
+        .form-text {
+            display: block;
+            margin-top: 0.25rem;
+            font-size: 0.875rem;
+            color: var(--secondary-color);
+        }
+
+        .form-row {
             display: flex;
-            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin: -0.5rem;
         }
 
-        .table .btn-icon {
-            width: 32px;
-            height: 32px;
+        .form-col {
+            flex: 1;
+            padding: 0.5rem;
+            min-width: 250px;
+        }
+
+        textarea.form-control {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .form-check {
             display: flex;
             align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-check-input {
+            margin-right: 0.5rem;
+            width: 1rem;
+            height: 1rem;
+        }
+
+        .form-check-label {
+            font-weight: 400;
+        }
+
+        /* Icon Selector */
+        .icon-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 0.5rem;
+        }
+
+        .icon-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.5rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
             transition: var(--transition);
         }
 
-        .table .btn-icon:hover {
-            transform: translateY(-2px);
+        .icon-option:hover {
+            background-color: var(--light-color);
         }
 
-        .table .status {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
+        .icon-option.selected {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+        }
+
+        .icon-option i {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .icon-option span {
             font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .table .status.read {
-            background-color: rgba(16, 185, 129, 0.1);
-            color: var(--success-color);
-        }
-
-        .table .status.unread {
-            background-color: rgba(245, 158, 11, 0.1);
-            color: var(--warning-color);
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            width: 100%;
         }
 
         /* Buttons */
@@ -762,7 +672,7 @@ if ($result && $result->num_rows > 0) {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1.5rem;
             border-radius: 0.375rem;
             font-weight: 500;
             text-align: center;
@@ -813,8 +723,50 @@ if ($result && $result->num_rows > 0) {
         }
 
         .btn-sm {
-            padding: 0.375rem 0.75rem;
+            padding: 0.5rem 1rem;
             font-size: 0.875rem;
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .alert i {
+            margin-right: 0.75rem;
+            font-size: 1.25rem;
+        }
+
+        .alert-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        .alert-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .alert-warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--warning-color);
+            color: var(--warning-color);
+        }
+
+        .alert-info {
+            background-color: rgba(6, 182, 212, 0.1);
+            border-left: 4px solid var(--info-color);
+            color: var(--info-color);
         }
 
         /* Responsive Styles */
@@ -841,16 +793,20 @@ if ($result && $result->num_rows > 0) {
         }
 
         @media (max-width: 768px) {
-            .dashboard-cards {
-                grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
-            }
-            
             .main-container {
                 padding: 1rem;
             }
             
             .header-search {
                 display: none;
+            }
+            
+            .form-row {
+                flex-direction: column;
+            }
+            
+            .form-col {
+                min-width: 100%;
             }
         }
 
@@ -919,7 +875,7 @@ if ($result && $result->num_rows > 0) {
                 <div class="sidebar-menu-category">Dashboard</div>
                 <ul>
                     <li class="sidebar-menu-item">
-                        <a href="dashboard.php" class="sidebar-menu-link active">
+                        <a href="dashboard.php" class="sidebar-menu-link">
                             <i class="fas fa-tachometer-alt"></i>
                             <span>Dashboard</span>
                         </a>
@@ -935,7 +891,7 @@ if ($result && $result->num_rows > 0) {
                         </a>
                     </li>
                     <li class="sidebar-menu-item">
-                        <a href="services.php" class="sidebar-menu-link">
+                        <a href="services.php" class="sidebar-menu-link active">
                             <i class="fas fa-cogs"></i>
                             <span>Servizi</span>
                         </a>
@@ -1033,181 +989,108 @@ if ($result && $result->num_rows > 0) {
 
             <div class="main-container">
                 <div class="page-title">
-                    <h1>Dashboard</h1>
+                    <h1>Aggiungi Servizio</h1>
                     <div class="breadcrumb">
                         <div class="breadcrumb-item">
                             <a href="dashboard.php">Home</a>
                         </div>
+                        <div class="breadcrumb-item">
+                            <a href="services.php">Servizi</a>
+                        </div>
                         <div class="breadcrumb-item active">
-                            Dashboard
+                            Aggiungi Servizio
                         </div>
                     </div>
                 </div>
 
-                <!-- Dashboard Cards -->
-                <div class="dashboard-cards">
-                    <div class="dashboard-card users">
-                        <div class="dashboard-card-icon users">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="dashboard-card-content">
-                            <h3>Utenti</h3>
-                            <p><?php echo $users_count; ?></p>
-                            <div class="dashboard-card-trend <?php echo $users_growth >= 0 ? 'up' : 'down'; ?>">
-                                <i class="fas fa-arrow-<?php echo $users_growth >= 0 ? 'up' : 'down'; ?>"></i>
-                                <span><?php echo abs($users_growth); ?>% rispetto al mese scorso</span>
-                            </div>
-                        </div>
+                <?php if (!empty($success_message)): ?>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        <span><?php echo $success_message; ?></span>
                     </div>
-                    <div class="dashboard-card services">
-                        <div class="dashboard-card-icon services">
-                            <i class="fas fa-cogs"></i>
-                        </div>
-                        <div class="dashboard-card-content">
-                            <h3>Servizi</h3>
-                            <p><?php echo $services_count; ?></p>
-                            <div class="dashboard-card-trend <?php echo $services_growth >= 0 ? 'up' : 'down'; ?>">
-                                <i class="fas fa-arrow-<?php echo $services_growth >= 0 ? 'up' : 'down'; ?>"></i>
-                                <span><?php echo abs($services_growth); ?>% rispetto al mese scorso</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="dashboard-card messages">
-                        <div class="dashboard-card-icon messages">
-                            <i class="fas fa-envelope"></i>
-                        </div>
-                        <div class="dashboard-card-content">
-                            <h3>Messaggi</h3>
-                            <p><?php echo $messages_count; ?></p>
-                            <div class="dashboard-card-trend <?php echo $messages_growth >= 0 ? 'up' : 'down'; ?>">
-                                <i class="fas fa-arrow-<?php echo $messages_growth >= 0 ? 'up' : 'down'; ?>"></i>
-                                <span><?php echo abs($messages_growth); ?>% rispetto al mese scorso</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="dashboard-card posts">
-                        <div class="dashboard-card-icon posts">
-                            <i class="fas fa-blog"></i>
-                        </div>
-                        <div class="dashboard-card-content">
-                            <h3>Articoli</h3>
-                            <p><?php echo $posts_count; ?></p>
-                            <div class="dashboard-card-trend <?php echo $posts_growth >= 0 ? 'up' : 'down'; ?>">
-                                <i class="fas fa-arrow-<?php echo $posts_growth >= 0 ? 'up' : 'down'; ?>"></i>
-                                <span><?php echo abs($posts_growth); ?>% rispetto al mese scorso</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <?php endif; ?>
 
-                <!-- Recent Messages -->
+                <?php if (!empty($error_message)): ?>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span><?php echo $error_message; ?></span>
+                    </div>
+                <?php endif; ?>
+
                 <div class="content-box">
                     <div class="content-box-header">
-                        <h2>Messaggi Recenti</h2>
+                        <h2>Informazioni Servizio</h2>
                         <div class="actions">
-                            <a href="contacts.php" class="btn btn-primary btn-sm">
-                                <i class="fas fa-eye"></i> Vedi Tutti
+                            <a href="services.php" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-arrow-left"></i> Torna alla lista
                             </a>
                         </div>
                     </div>
                     <div class="content-box-body">
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Nome</th>
-                                        <th>Email</th>
-                                        <th>Servizio</th>
-                                        <th>Data</th>
-                                        <th>Stato</th>
-                                        <th>Azioni</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($recent_messages)): ?>
-                                        <tr>
-                                            <td colspan="6" class="text-center">Nessun messaggio trovato</td>
-                                        </tr>
-                                    <?php else: ?>
-                                        <?php foreach ($recent_messages as $message): ?>
-                                            <tr>
-                                                <td><?php echo htmlspecialchars($message['name']); ?></td>
-                                                <td><?php echo htmlspecialchars($message['email']); ?></td>
-                                                <td><?php echo htmlspecialchars($message['service'] ?: 'N/A'); ?></td>
-                                                <td><?php echo date('d/m/Y H:i', strtotime($message['created_at'])); ?></td>
-                                                <td>
-                                                    <?php if ($message['is_read'] == 0): ?>
-                                                        <span class="status unread">Non letto</span>
-                                                    <?php else: ?>
-                                                        <span class="status read">Letto</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td class="actions">
-                                                    <a href="view-message.php?id=<?php echo $message['id']; ?>" class="btn btn-primary btn-icon" title="Visualizza">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <a href="delete-message.php?id=<?php echo $message['id']; ?>" class="btn btn-danger btn-icon" title="Elimina" onclick="return confirm('Sei sicuro di voler eliminare questo messaggio?');">
-                                                        <i class="fas fa-trash"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Users -->
-                <div class="content-box">
-                    <div class="content-box-header">
-                        <h2>Utenti Recenti</h2>
-                        <div class="actions">
-                            <a href="users.php" class="btn btn-primary btn-sm">
-                                <i class="fas fa-eye"></i> Vedi Tutti
-                            </a>
-                        </div>
-                    </div>
-                    <div class="content-box-body">
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Nome</th>
-                                        <th>Email</th>
-                                        <th>Data Registrazione</th>
-                                        <th>Azioni</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($recent_users)): ?>
-                                        <tr>
-                                            <td colspan="4" class="text-center">Nessun utente trovato</td>
-                                        </tr>
-                                    <?php else: ?>
-                                        <?php foreach ($recent_users as $user): ?>
-                                            <tr>
-                                                <td><?php echo htmlspecialchars($user['name']); ?></td>
-                                                <td><?php echo htmlspecialchars($user['email']); ?></td>
-                                                <td><?php echo date('d/m/Y', strtotime($user['created_at'])); ?></td>
-                                                <td class="actions">
-                                                    <a href="view-user.php?id=<?php echo $user['id']; ?>" class="btn btn-primary btn-icon" title="Visualizza">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <a href="edit-user.php?id=<?php echo $user['id']; ?>" class="btn btn-secondary btn-icon" title="Modifica">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                    <a href="delete-user.php?id=<?php echo $user['id']; ?>" class="btn btn-danger btn-icon" title="Elimina" onclick="return confirm('Sei sicuro di voler eliminare questo utente?');">
-                                                        <i class="fas fa-trash"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
+                        <form action="add-service.php" method="post">
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <div class="form-group">
+                                        <label for="name">Nome Servizio *</label>
+                                        <input type="text" id="name" name="name" class="form-control <?php echo isset($errors['name']) ? 'is-invalid' : ''; ?>" value="<?php echo htmlspecialchars($name); ?>" required>
+                                        <?php if (isset($errors['name'])): ?>
+                                            <div class="invalid-feedback"><?php echo $errors['name']; ?></div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="form-col">
+                                    <div class="form-group">
+                                        <label for="slug">Slug</label>
+                                        <input type="text" id="slug" name="slug" class="form-control <?php echo isset($errors['slug']) ? 'is-invalid' : ''; ?>" value="<?php echo htmlspecialchars($slug); ?>">
+                                        <div class="form-text">Se lasciato vuoto, verrà generato automaticamente dal nome.</div>
+                                        <?php if (isset($errors['slug'])): ?>
+                                            <div class="invalid-feedback"><?php echo $errors['slug']; ?></div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="description">Descrizione *</label>
+                                <textarea id="description" name="description" class="form-control <?php echo isset($errors['description']) ? 'is-invalid' : ''; ?>" required><?php echo htmlspecialchars($description); ?></textarea>
+                                <?php if (isset($errors['description'])): ?>
+                                    <div class="invalid-feedback"><?php echo $errors['description']; ?></div>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="icon">Icona *</label>
+                                <input type="text" id="icon" name="icon" class="form-control <?php echo isset($errors['icon']) ? 'is-invalid' : ''; ?>" value="<?php echo htmlspecialchars($icon); ?>" readonly required>
+                                <?php if (isset($errors['icon'])): ?>
+                                    <div class="invalid-feedback"><?php echo $errors['icon']; ?></div>
+                                <?php endif; ?>
+                                
+                                <div class="icon-selector">
+                                    <?php foreach ($available_icons as $icon_class => $icon_name): ?>
+                                        <div class="icon-option" data-icon="<?php echo $icon_class; ?>">
+                                            <i class="fas <?php echo $icon_class; ?>"></i>
+                                            <span><?php echo $icon_name; ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input type="checkbox" id="is_active" name="is_active" class="form-check-input" <?php echo $is_active ? 'checked' : ''; ?>>
+                                    <label for="is_active" class="form-check-label">Servizio attivo</label>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Salva Servizio
+                                </button>
+                                <a href="services.php" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Annulla
+                                </a>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -1252,6 +1135,54 @@ if ($result && $result->num_rows > 0) {
                     }
                 });
             }
+            
+            // Icon selector
+            const iconInput = document.getElementById('icon');
+            const iconOptions = document.querySelectorAll('.icon-option');
+            
+            // Set initial selected icon if there's a value
+            if (iconInput.value) {
+                iconOptions.forEach(option => {
+                    if (option.dataset.icon === iconInput.value) {
+                        option.classList.add('selected');
+                    }
+                });
+            }
+            
+            iconOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    // Remove selected class from all options
+                    iconOptions.forEach(opt => opt.classList.remove('selected'));
+                    
+                    // Add selected class to clicked option
+                    this.classList.add('selected');
+                    
+                    // Set the icon value in the input
+                    iconInput.value = this.dataset.icon;
+                });
+            });
+            
+            // Auto-generate slug from name
+            const nameInput = document.getElementById('name');
+            const slugInput = document.getElementById('slug');
+            
+            nameInput.addEventListener('input', function() {
+                // Only auto-generate if slug is empty or hasn't been manually edited
+                if (!slugInput.value || slugInput._autoGenerated) {
+                    const slug = this.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/^-+|-+$/g, '');
+                    
+                    slugInput.value = slug;
+                    slugInput._autoGenerated = true;
+                }
+            });
+            
+            slugInput.addEventListener('input', function() {
+                // Mark as manually edited
+                this._autoGenerated = false;
+            });
         });
     </script>
 </body>

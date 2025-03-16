@@ -142,5 +142,30 @@ function get_post_by_id($conn, $post_id) {
     
     return null;
 }
+
+/**
+ * Crea uno slug da una stringa
+ * 
+ * @param string $string La stringa da convertire in slug
+ * @return string Lo slug generato
+ */
+function create_slug($string) {
+    // Converti in minuscolo
+    $string = strtolower($string);
+    
+    // Rimuovi caratteri speciali
+    $string = preg_replace('/[^a-z0-9\s-]/', '', $string);
+    
+    // Sostituisci spazi con trattini
+    $string = preg_replace('/\s+/', '-', $string);
+    
+    // Rimuovi trattini multipli
+    $string = preg_replace('/-+/', '-', $string);
+    
+    // Rimuovi trattini all'inizio e alla fine
+    $string = trim($string, '-');
+    
+    return $string;
+}
 ?>
 
