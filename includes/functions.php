@@ -1,171 +1,405 @@
 <?php
+// Funzioni di utilità per il sistema POS
+
 /**
- * Sanitize user input
- * 
- * @param string $data The input data to sanitize
- * @return string The sanitized data
+ * Verifica lo stato della stampante fiscale
+ * @return bool Stato della stampante (true = attiva, false = non attiva)
  */
-function sanitize_input($data) {
-    $data = trim($data);
-    $data = stripslashes($data);
-    $data = htmlspecialchars($data);
-    return $data;
+function checkFiscalPrinterStatus() {
+    // Qui andrebbe implementata la logica di verifica della stampante fiscale
+    // Per ora restituiamo un valore di esempio
+    return false;
 }
 
 /**
- * Check if user is logged in
- * 
- * @return bool True if user is logged in, false otherwise
+ * Ottiene l'elenco dei gestori disponibili
+ * @return array Lista dei gestori
  */
-function is_logged_in() {
-    return isset($_SESSION['user_id']);
+function getProviders() {
+    return [
+        'fastweb' => 'Fastweb',
+        'iliad' => 'Iliad',
+        'windtre' => 'WindTre',
+        'skywifi' => 'Sky Wifi',
+        'skytv' => 'Sky TV',
+        'pianetafibra' => 'Pianeta Fibra'
+    ];
 }
 
 /**
- * Redirect to login page if user is not logged in
+ * Ottiene i prodotti dal database
+ * @param string $provider Filtra per gestore (opzionale)
+ * @param string $type Filtra per tipo (sim, dispositivo, ricarica)
+ * @return array Lista dei prodotti
  */
-function require_login() {
-    if (!is_logged_in()) {
-        header('Location: ../login.php');
-        exit;
-    }
-}
-
-/**
- * Get user data by ID
- * 
- * @param mysqli $conn Database connection
- * @param int $user_id User ID
- * @return array|null User data or null if not found
- */
-function get_user_by_id($conn, $user_id) {
-    $stmt = $conn->prepare("SELECT id, name, email, created_at FROM users WHERE id = ?");
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
+function getProducts($provider = null, $type = null) {
+    global $pdo;
     
-    if ($result->num_rows === 1) {
-        return $result->fetch_assoc();
+    $sql = "SELECT * FROM prodotti WHERE 1=1";
+    $params = [];
+    
+    if ($provider) {
+        $sql .= " AND gestore = ?";
+        $params[] = $provider;
     }
     
-    return null;
-}
-
-/**
- * Format date in Italian format
- * 
- * @param string $date Date in Y-m-d format
- * @return string Date in d/m/Y format
- */
-function format_date($date) {
-    return date('d/m/Y', strtotime($date));
-}
-
-/**
- * Get all services
- * 
- * @param mysqli $conn Database connection
- * @return array Array of services
- */
-function get_all_services($conn) {
-    $services = [];
-    $result = $conn->query("SELECT * FROM services ORDER BY name");
+    if ($type) {
+        $sql .= " AND tipo = ?";
+        $params[] = $type;
+    }
     
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $services[] = $row;
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    
+    return $stmt->fetchAll();
+}
+
+/**
+ * Ottiene un prodotto dal database tramite ID
+ * @param int $id ID del prodotto
+ * @return array|false Dati del prodotto o false se non trovato
+ */
+function getProductById($id) {
+    global $pdo;
+    
+    $stmt = $pdo->prepare("SELECT * FROM prodotti WHERE id = ?");
+    $stmt->execute([$id]);
+    
+    return $stmt->fetch();
+}
+
+/**
+ * Aggiunge un prodotto al carrello
+ * @param int $product_id ID del prodotto
+ * @param int $quantity Quantità
+ * @return bool Esito dell'operazione
+ */
+function addToCart($product_id, $quantity = 1) {
+    $product = getProductById($product_id);
+    
+    if (!$product) {
+        return false;
+    }
+    
+    // Se il prodotto è già nel carrello, aggiorna la quantità
+    if (isset($_SESSION['cart'][$product_id])) {
+        $_SESSION['cart'][$product_id]['quantity'] += $quantity;
+    } else {
+        $_SESSION['cart'][$product_id] = [
+            'id' => $product['id'],
+            'codice' => $product['codice'],
+            'nome' => $product['nome'],
+            'prezzo' => $product['prezzo'],
+            'iva' => $product['iva'],
+            'quantity' => $quantity
+        ];
+    }
+    
+    return true;
+}
+
+/**
+ * Rimuove un prodotto dal carrello
+ * @param int $product_id ID del prodotto
+ * @return bool Esito dell'operazione
+ */
+function removeFromCart($product_id) {
+    if (isset($_SESSION['cart'][$product_id])) {
+        unset($_SESSION['cart'][$product_id]);
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Calcola il totale del carrello
+ * @return array Totali (subtotale, iva, totale)
+ */
+function calculateCartTotal() {
+    $subtotal = 0;
+    $total_iva = 0;
+    
+    foreach ($_SESSION['cart'] as $item) {
+        $price = $item['prezzo'] * $item['quantity'];
+        $subtotal += $price;
+        $total_iva += $price * ($item['iva'] / 100);
+    }
+    
+    $total = $subtotal + $total_iva;
+    
+    return [
+        'subtotal' => $subtotal,
+        'iva' => $total_iva,
+        'total' => $total
+    ];
+}
+
+/**
+ * Svuota il carrello
+ */
+function clearCart() {
+    $_SESSION['cart'] = [];
+}
+
+/**
+ * Registra una transazione nel database
+ * @param array $customer_data Dati del cliente
+ * @param float $discount Sconto applicato
+ * @param string $payment_method Metodo di pagamento
+ * @return int|false ID della transazione o false in caso di errore
+ */
+function saveTransaction($customer_data, $discount = 0, $payment_method = 'contanti') {
+    global $pdo;
+    
+    try {
+        $pdo->beginTransaction();
+        
+        $totals = calculateCartTotal();
+        $total_with_discount = $totals['total'] - $discount;
+        
+        // Inserisci la transazione
+        $stmt = $pdo->prepare("
+            INSERT INTO transazioni (
+                data, 
+                totale, 
+                iva, 
+                sconto, 
+                metodo_pagamento, 
+                cliente_nome, 
+                cliente_cognome, 
+                cliente_telefono, 
+                cliente_email, 
+                cliente_cf, 
+                numero_scontrino
+            ) VALUES (
+                NOW(), 
+                ?, 
+                ?, 
+                ?, 
+                ?, 
+                ?, 
+                ?, 
+                ?, 
+                ?, 
+                ?,
+                ?
+            )
+        ");
+        
+        $receipt_number = generateReceiptNumber();
+        
+        $stmt->execute([
+            $total_with_discount,
+            $totals['iva'],
+            $discount,
+            $payment_method,
+            $customer_data['nome'] ?? '',
+            $customer_data['cognome'] ?? '',
+            $customer_data['telefono'] ?? '',
+            $customer_data['email'] ?? '',
+            $customer_data['codice_fiscale'] ?? '',
+            $receipt_number
+        ]);
+        
+        $transaction_id = $pdo->lastInsertId();
+        
+        // Inserisci i dettagli della transazione
+        foreach ($_SESSION['cart'] as $item) {
+            $stmt = $pdo->prepare("
+                INSERT INTO transazioni_dettaglio (
+                    transazione_id, 
+                    prodotto_id, 
+                    codice, 
+                    nome, 
+                    prezzo, 
+                    iva, 
+                    quantita
+                ) VALUES (
+                    ?, 
+                    ?, 
+                    ?, 
+                    ?, 
+                    ?, 
+                    ?, 
+                    ?
+                )
+            ");
+            
+            $stmt->execute([
+                $transaction_id,
+                $item['id'],
+                $item['codice'],
+                $item['nome'],
+                $item['prezzo'],
+                $item['iva'],
+                $item['quantity']
+            ]);
+            
+            // Aggiorna il magazzino
+            updateInventory($item['id'], $item['quantity']);
         }
-    }
-    
-    return $services;
-}
-
-/**
- * Get service by ID
- * 
- * @param mysqli $conn Database connection
- * @param int $service_id Service ID
- * @return array|null Service data or null if not found
- */
-function get_service_by_id($conn, $service_id) {
-    $stmt = $conn->prepare("SELECT * FROM services WHERE id = ?");
-    $stmt->bind_param("i", $service_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows === 1) {
-        return $result->fetch_assoc();
-    }
-    
-    return null;
-}
-
-/**
- * Get recent blog posts
- * 
- * @param mysqli $conn Database connection
- * @param int $limit Number of posts to retrieve
- * @return array Array of blog posts
- */
-function get_recent_posts($conn, $limit = 3) {
-    $posts = [];
-    $stmt = $conn->prepare("SELECT * FROM blog_posts WHERE status = 'published' ORDER BY created_at DESC LIMIT ?");
-    $stmt->bind_param("i", $limit);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $posts[] = $row;
+        
+        // Emetti lo scontrino fiscale
+        $fiscal_receipt = emitFiscalReceipt($transaction_id);
+        
+        // Aggiorna la transazione con i dati dello scontrino
+        if ($fiscal_receipt) {
+            $stmt = $pdo->prepare("
+                UPDATE transazioni 
+                SET 
+                    numero_scontrino = ?,
+                    data_scontrino = ?
+                WHERE id = ?
+            ");
+            
+            $stmt->execute([
+                $fiscal_receipt['numero'],
+                $fiscal_receipt['data'],
+                $transaction_id
+            ]);
         }
+        
+        $pdo->commit();
+        clearCart();
+        
+        return $transaction_id;
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        error_log("Errore durante il salvataggio della transazione: " . $e->getMessage());
+        return false;
     }
-    
-    return $posts;
 }
 
 /**
- * Get blog post by ID
- * 
- * @param mysqli $conn Database connection
- * @param int $post_id Post ID
- * @return array|null Post data or null if not found
+ * Aggiorna il magazzino dopo una vendita
+ * @param int $product_id ID del prodotto
+ * @param int $quantity Quantità venduta
+ * @return bool Esito dell'operazione
  */
-function get_post_by_id($conn, $post_id) {
-    $stmt = $conn->prepare("SELECT * FROM blog_posts WHERE id = ? AND status = 'published'");
-    $stmt->bind_param("i", $post_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
+function updateInventory($product_id, $quantity) {
+    global $pdo;
     
-    if ($result->num_rows === 1) {
-        return $result->fetch_assoc();
-    }
+    $stmt = $pdo->prepare("
+        UPDATE prodotti 
+        SET quantita = quantita - ? 
+        WHERE id = ?
+    ");
     
-    return null;
+    return $stmt->execute([$quantity, $product_id]);
 }
 
 /**
- * Crea uno slug da una stringa
- * 
- * @param string $string La stringa da convertire in slug
- * @return string Lo slug generato
+ * Genera un numero di scontrino
+ * @return string Numero di scontrino
  */
-function create_slug($string) {
-    // Converti in minuscolo
-    $string = strtolower($string);
-    
-    // Rimuovi caratteri speciali
-    $string = preg_replace('/[^a-z0-9\s-]/', '', $string);
-    
-    // Sostituisci spazi con trattini
-    $string = preg_replace('/\s+/', '-', $string);
-    
-    // Rimuovi trattini multipli
-    $string = preg_replace('/-+/', '-', $string);
-    
-    // Rimuovi trattini all'inizio e alla fine
-    $string = trim($string, '-');
-    
-    return $string;
+function generateReceiptNumber() {
+    return date('Ymd') . '-' . rand(1000, 9999);
 }
-?>
+
+/**
+ * Emette uno scontrino fiscale tramite il misuratore fiscale
+ * @param int $transaction_id ID della transazione
+ * @return array|false Dati dello scontrino o false in caso di errore
+ */
+function emitFiscalReceipt($transaction_id) {
+    global $pdo;
+    
+    // Recupera i dati della transazione
+    $stmt = $pdo->prepare("
+        SELECT t.*, td.* 
+        FROM transazioni t
+        JOIN transazioni_dettaglio td ON t.id = td.transazione_id
+        WHERE t.id = ?
+    ");
+    
+    $stmt->execute([$transaction_id]);
+    $transaction_data = $stmt->fetchAll();
+    
+    if (empty($transaction_data)) {
+        return false;
+    }
+    
+    // Qui andrebbe implementata la logica di comunicazione con il misuratore fiscale
+    // Questo è solo un esempio di implementazione
+    
+    // Simula l'emissione dello scontrino
+    $receipt_data = [
+        'numero' => generateReceiptNumber(),
+        'data' => date('Y-m-d H:i:s')
+    ];
+    
+    return $receipt_data;
+}
+
+/**
+ * Cerca transazioni nel database
+ * @param array $filters Filtri di ricerca
+ * @return array Lista delle transazioni
+ */
+function searchTransactions($filters = []) {
+    global $pdo;
+    
+    $sql = "SELECT * FROM transazioni WHERE 1=1";
+    $params = [];
+    
+    if (!empty($filters['data_da'])) {
+        $sql .= " AND data >= ?";
+        $params[] = $filters['data_da'] . ' 00:00:00';
+    }
+    
+    if (!empty($filters['data_a'])) {
+        $sql .= " AND data <= ?";
+        $params[] = $filters['data_a'] . ' 23:59:59';
+    }
+    
+    if (!empty($filters['cliente'])) {
+        $sql .= " AND (cliente_nome LIKE ? OR cliente_cognome LIKE ? OR cliente_telefono LIKE ?)";
+        $search_term = '%' . $filters['cliente'] . '%';
+        $params[] = $search_term;
+        $params[] = $search_term;
+        $params[] = $search_term;
+    }
+    
+    $sql .= " ORDER BY data DESC";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    
+    return $stmt->fetchAll();
+}
+
+
+/**
+ * Verifica se l'utente ha un determinato permesso
+ * 
+ * @param string $permissionName Nome del permesso da verificare
+ * @return bool True se l'utente ha il permesso, False altrimenti
+ */
+function hasPermission($permissionName) {
+    // Se l'utente è admin, ha tutti i permessi
+    if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin') {
+        return true;
+    }
+    
+    // Verifica se l'utente ha il permesso specifico
+    if (!isset($_SESSION['user_id'])) {
+        return false;
+    }
+    
+    $db = getDbConnection();
+    $stmt = $db->prepare("
+        SELECT COUNT(*) as count 
+        FROM roles_permissions rp
+        JOIN permissions p ON rp.permission_id = p.id
+        JOIN roles r ON rp.role_id = r.id
+        JOIN users u ON u.role_id = r.id
+        WHERE u.id = ? AND p.name = ?
+    ");
+    
+    $stmt->execute([$_SESSION['user_id'], $permissionName]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    return $result['count'] > 0;
+}
 
