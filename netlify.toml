@@ -1,0 +1,9 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+# Reindirizza tutte le richieste all'index per supportare la navigazione SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
