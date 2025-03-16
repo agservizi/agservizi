@@ -1,6 +1,8 @@
 <?php
 // Verifica dell'autenticazione
 require_once 'includes/auth_check.php';
+// Inclusione della configurazione database
+require_once 'config/database.php';
 
 // Verifica dei permessi di accesso alla cassa
 if (!hasPermission('view_cassa')) {
@@ -32,12 +34,66 @@ $cassa_info = $stmt->fetch(PDO::FETCH_ASSOC);
 $cassa_aperta = ($cassa_info['ultima_apertura'] > $cassa_info['ultima_chiusura'] || 
                 ($cassa_info['ultima_apertura'] && !$cassa_info['ultima_chiusura']));
 
-// Recupera i movimenti di cassa (ultimi 50)
-$stmt = $db->prepare("SELECT mc.*, u.nome, u.cognome 
-                      FROM movimenti_cassa mc
-                      LEFT JOIN utenti u ON mc.id_utente = u.id
-                      ORDER BY mc.data_operazione DESC
-                      LIMIT 50");
+// Gestione filtri per la ricerca dei movimenti
+$where_conditions = [];
+$params = [];
+
+// Filtro per data
+if (isset($_GET['data_inizio']) && !empty($_GET['data_inizio'])) {
+    $where_conditions[] = "DATE(mc.data_operazione) >= :data_inizio";
+    $params[':data_inizio'] = $_GET['data_inizio'];
+}
+if (isset($_GET['data_fine']) && !empty($_GET['data_fine'])) {
+    $where_conditions[] = "DATE(mc.data_operazione) <= :data_fine";
+    $params[':data_fine'] = $_GET['data_fine'];
+}
+
+// Filtro per tipo movimento
+if (isset($_GET['tipo']) && !empty($_GET['tipo'])) {
+    $where_conditions[] = "mc.tipo = :tipo";
+    $params[':tipo'] = $_GET['tipo'];
+}
+
+// Filtro per categoria
+if (isset($_GET['categoria']) && !empty($_GET['categoria'])) {
+    $where_conditions[] = "mc.categoria = :categoria";
+    $params[':categoria'] = $_GET['categoria'];
+}
+
+// Filtro per importo
+if (isset($_GET['importo_min']) && !empty($_GET['importo_min'])) {
+    $where_conditions[] = "mc.importo >= :importo_min";
+    $params[':importo_min'] = $_GET['importo_min'];
+}
+if (isset($_GET['importo_max']) && !empty($_GET['importo_max'])) {
+    $where_conditions[] = "mc.importo <= :importo_max";
+    $params[':importo_max'] = $_GET['importo_max'];
+}
+
+// Filtro per riferimento o descrizione
+if (isset($_GET['riferimento']) && !empty($_GET['riferimento'])) {
+    // Usar solo "LIKE" sulla descrizione se il riferimento non è una colonna presente nella tabella
+    $where_conditions[] = "(mc.descrizione LIKE :riferimento_desc)";
+    $search_term = '%' . $_GET['riferimento'] . '%';
+    $params[':riferimento_desc'] = $search_term;
+}
+
+// Costruisci la query con i filtri
+$sql = "SELECT mc.*, u.nome, u.cognome 
+        FROM movimenti_cassa mc
+        LEFT JOIN utenti u ON mc.id_utente = u.id";
+
+if (!empty($where_conditions)) {
+    $sql .= " WHERE " . implode(' AND ', $where_conditions);
+}
+
+$sql .= " ORDER BY mc.data_operazione DESC LIMIT 50";
+
+// Recupera i movimenti di cassa con i filtri applicati
+$stmt = $db->prepare($sql);
+foreach ($params as $key => $value) {
+    $stmt->bindValue($key, $value);
+}
 $stmt->execute();
 $movimenti = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -917,23 +973,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const tipo = document.getElementById('filtroTipo').value;
         const categoria = document.getElementById('filtroCategoria').value;
         
-        // Applica i filtri alla tabella
-        movimentiTable.search('').columns().search('').draw();
+        // Metodo più sicuro: sempre ricaricare la pagina con i parametri
+        const url = new URL(window.location.href);
+        // Pulisci prima tutti i parametri esistenti
+        url.search = '';
         
-        if (dataInizio || dataFine) {
-            // Implementa filtro per data (richiede plugin aggiuntivo per DataTables)
-            // Per semplicità, qui ricarichiamo la pagina con i parametri di filtro
-            const url = new URL(window.location.href);
-            if (dataInizio) url.searchParams.set('data_inizio', dataInizio);
-            if (dataFine) url.searchParams.set('data_fine', dataFine);
-            if (tipo) url.searchParams.set('tipo', tipo);
-            if (categoria) url.searchParams.set('categoria', categoria);
-            window.location.href = url.toString();
-        } else {
-            // Filtri semplici
-            if (tipo) movimentiTable.column(3).search(tipo).draw();
-            if (categoria) movimentiTable.column(4).search(categoria).draw();
-        }
+        if (dataInizio) url.searchParams.set('data_inizio', dataInizio);
+        if (dataFine) url.searchParams.set('data_fine', dataFine);
+        if (tipo) url.searchParams.set('tipo', tipo);
+        if (categoria) url.searchParams.set('categoria', categoria);
+        window.location.href = url.toString();
     });
 
     // Gestione filtri modal
@@ -946,9 +995,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const importoMax = document.getElementById('filtroModalImportoMax').value;
         const riferimento = document.getElementById('filtroModalRiferimento').value;
         
-        // Chiudi il modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('filtraMovimentiModal'));
-        modal.hide();
+        // Chiudi il modal - gestione più sicura
+        try {
+            const modalEl = document.getElementById('filtraMovimentiModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+        } catch (error) {
+            console.error('Errore nella chiusura del modal:', error);
+        }
         
         // Applica i filtri (ricarica la pagina con i parametri)
         const url = new URL(window.location.href);
@@ -984,9 +1040,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         window.open(url, '_blank');
         
-        // Chiudi il modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('reportCassaModal'));
-        modal.hide();
+        // Chiudi il modal - gestione più sicura
+        try {
+            const modalEl = document.getElementById('reportCassaModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+        } catch (error) {
+            console.error('Errore nella chiusura del modal:', error);
+        }
     });
 
     // Gestione esportazione
@@ -1145,9 +1208,16 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Si è verificato un errore durante l\'eliminazione del movimento');
         });
         
-        // Chiudi il modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('confermaEliminazioneModal'));
-        modal.hide();
+        // Chiudi il modal - gestione più sicura
+        try {
+            const modalEl = document.getElementById('confermaEliminazioneModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+        } catch (error) {
+            console.error('Errore nella chiusura del modal:', error);
+        }
     });
 
     // Imposta le date di default per i filtri
